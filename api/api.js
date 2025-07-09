@@ -1,7 +1,8 @@
 import { Router } from "express";
 
-import messageRouter from "./messages/messageRouter.js";
 import authRouter from "./auth/authRouter.js";
+import messageRouter from "./messages/messageRouter.js";
+
 
 const api = Router();
 
