@@ -1,10 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-
 import db from "../db.js";
-
 import config from "../utils/config.js";
-
 import logger from "../utils/logger.js";
 
 const JWT_SECRET = config.jwtSecret;
