@@ -1,10 +1,10 @@
-
-//import { pool } from "../db.js"; // Update the path to your db connection
-import db from "../db.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET || '6e80d96f8f429f97c1a41c70bb4902d81237c7f88ae112de9c3583a70e12d31c';
+import db from "../db.js";
+
+import config from "../utils/config.js";
+const JWT_SECRET = config.jwtSecret;
 
 // handle Login
 export async function handleLogin(req, res) {
@@ -42,7 +42,6 @@ export async function handleLogin(req, res) {
     });
 
   } catch (err) {
-    console.error("Login error:",err.stack || err);
     res.status(500).json({ message: "Server error during login." });
   }
 }
@@ -85,7 +84,6 @@ export async function handleRegister(req, res) {
 
     res.status(201).json({ token, user: newUser, message: 'Registration successful.'});
   } catch (err) {
-    console.error('Registration error:', err.message);
     res.status(500).json({ 
       error: 'Internal server error',
       message: 'Something went wrong on our side, please try again later.' });
