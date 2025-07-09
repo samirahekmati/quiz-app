@@ -4,6 +4,9 @@ import jwt from "jsonwebtoken";
 import db from "../db.js";
 
 import config from "../utils/config.js";
+
+import logger from "../utils/logger.js";
+
 const JWT_SECRET = config.jwtSecret;
 
 // handle Login
@@ -31,7 +34,7 @@ export async function handleLogin(req, res) {
     }
 
     // Generate a JWT token
-    const token = jwt.sign({ id: user.id, email: user.email }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user.id, email: user.email },JWT_SECRET, {
       expiresIn: "1h",
     });
 
@@ -42,6 +45,7 @@ export async function handleLogin(req, res) {
     });
 
   } catch (err) {
+    logger.error("Login error:", err);
     res.status(500).json({ message: "Server error during login." });
   }
 }
@@ -84,8 +88,8 @@ export async function handleRegister(req, res) {
 
     res.status(201).json({ token, user: newUser, message: 'Registration successful.'});
   } catch (err) {
+    logger.error("Registration error:", err);
     res.status(500).json({ 
-      error: 'Internal server error',
       message: 'Something went wrong on our side, please try again later.' });
   }
 }
