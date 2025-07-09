@@ -11,7 +11,8 @@ export async function handleLogin(req, res) {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required." });
+    return res.status(400).json({
+       message: "Email and password are required." });
   }
 
   try {
@@ -49,19 +50,21 @@ export async function handleLogin(req, res) {
 
 
 
-
+// Handle Registration
 export async function handleRegister(req, res) {
   const { email, password, username } = req.body;
 
   if (!email || !password || !username) {
-    return res.status(400).json({ error: 'Email, username, and password are required' });
+    return res.status(400).json({ message: 'Email, username, and password are required' });
   }
 
   try {
     // Check if user already exists
     const userExists = await db.query('SELECT * FROM users WHERE email = $1', [email]);
     if (userExists.rows.length > 0) {
-      return res.status(409).json({ error: 'User with this email already exists' });
+      return res.status(409).json({ 
+        error: 'error 409',
+       message: 'User with this email already exists'});
     }
 
     // Hash password
@@ -80,9 +83,11 @@ export async function handleRegister(req, res) {
       expiresIn: '1h',
     });
 
-    res.status(201).json({ token, user: newUser });
+    res.status(201).json({ token, user: newUser, message: 'Registration successful.'});
   } catch (err) {
     console.error('Registration error:', err.message);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({ 
+      error: 'Internal server error',
+      message: 'Something went wrong on our side, please try again later.' });
   }
 }
