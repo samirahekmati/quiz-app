@@ -13,3 +13,19 @@ CREATE TABLE public.users (
 	created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 	username TEXT NOT NULL
 );
+
+
+-- public.quizzes definition
+
+-- Drop table
+
+-- DROP TABLE public.quizzes;
+
+CREATE TABLE public.quizzes (
+	id serial4 NOT NULL,
+	title varchar(255) NOT NULL,
+	description text NULL,
+	duration int4 NOT NULL,
+	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT quizzes_pkey PRIMARY KEY (id)
+);
