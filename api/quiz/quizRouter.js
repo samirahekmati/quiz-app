@@ -1,12 +1,14 @@
 import { Router } from "express";
 import { createQuiz, getQuizById } from "./quizController.js";
-import { createQuestion } from "../questions/questionController.js";
+import questionRouter from "../questions/questionRouter.js"
 
-const router = Router();
+const quizRouter = Router();
 
 // Route to create a new quiz
-router.post("/", createQuiz);
-router.post("/:quizId/questions", createQuestion);
-router.get("/:quizId", getQuizById);
+quizRouter.post("/", createQuiz); // api/quizzes
+// Route to Get quiz with id (questions and options)
+quizRouter.get("/:quizId", getQuizById) // Get api/quizzes/:quizId
+// Mount questionRouter to handle all question-related routes for a specific quiz
+quizRouter.use("/:quizId/questions", questionRouter)
 
-export default router;
+export default quizRouter;

@@ -1,8 +1,9 @@
 import { Router } from "express";
-import { createQuestion } from "./questionController.js";
+import { createQuestion, updateQuestion } from "./questionController.js";
 
-const router = Router();
+const router = Router({ mergeParams: true });
 
-router.post("/:quizId/questions", createQuestion); // POST /api/quizzes/:quizId/questions
+router.post("/", createQuestion); // POST /api/quizzes/:quizId/questions
+router.put("/:questionId", updateQuestion) // Put /api/quizzes/:quizId/questions/questionId
 
 export default router;
