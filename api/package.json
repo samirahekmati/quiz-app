@@ -11,7 +11,7 @@
 		"migration:create": "node-pg-migrate create --template-file-name ./migrations/template.js"
 	},
 	"dependencies": {
-		"dotenv": "^17.1.0",
+		"dotenv": "^17.2.0",
 		"express": "^5.1.0",
 		"helmet": "^8.1.0",
 		"morgan": "^1.10.0",
@@ -20,7 +20,7 @@
 		"winston": "^3.17.0"
 	},
 	"devDependencies": {
-		"@testcontainers/postgresql": "^11.1.0",
-		"supertest": "^7.1.1"
+		"@testcontainers/postgresql": "^11.2.1",
+		"supertest": "^7.1.3"
 	}
 }
