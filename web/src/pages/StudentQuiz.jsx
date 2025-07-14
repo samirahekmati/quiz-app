@@ -42,12 +42,12 @@ function StudentQuiz() {
 	const [quizStarted, setQuizStarted] = useState(false);
 	// State for current question index
 	const [current, setCurrent] = useState(0);
-	// State for answers: { [questionId]: answer }
+	// State for answers: { [questionId]: answer or array of answers }
 	const [answers, setAnswers] = useState({});
 	// State for text answer
 	const [textAnswer, setTextAnswer] = useState("");
-	// State for selected option (for multiple-choice)
-	const [selectedOption, setSelectedOption] = useState(null);
+	// State for selected options (array for multiple correct)
+	const [selectedOptions, setSelectedOptions] = useState([]);
 
 	// Check if quizId matches mockQuiz.id (MVP only)
 	if (Number(quizId) !== mockQuiz.id) {
@@ -62,22 +62,30 @@ function StudentQuiz() {
 	const quiz = mockQuiz; // In real app, fetch by quizId
 	const questions = quiz.questions;
 	const question = questions[current];
+	// Detect if multiple correct answers
+	const isMultiple =
+		question.type === "multiple-choice" &&
+		question.options.filter((o) => o.is_correct).length > 1;
 
 	// Handle answer submit (Next)
 	const handleNext = (e) => {
 		e.preventDefault();
-		// Save answer
+		let newAnswers = { ...answers };
 		if (question.type === "multiple-choice") {
-			if (selectedOption == null) return; // must select
-			setAnswers((prev) => ({ ...prev, [question.id]: selectedOption }));
+			if (isMultiple) {
+				if (selectedOptions.length === 0) return; // must select at least one
+				newAnswers[question.id] = selectedOptions;
+			} else {
+				if (selectedOptions.length !== 1) return; // must select one
+				newAnswers[question.id] = selectedOptions[0];
+			}
 		} else {
 			if (!textAnswer.trim()) return; // must enter
-			setAnswers((prev) => ({ ...prev, [question.id]: textAnswer.trim() }));
+			newAnswers[question.id] = textAnswer.trim();
 		}
-		// Reset answer state for next question
-		setSelectedOption(null);
+		setAnswers(newAnswers);
+		setSelectedOptions([]);
 		setTextAnswer("");
-		// Go to next question or finish
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
@@ -85,9 +93,8 @@ function StudentQuiz() {
 			// In production, this will be replaced by API/database call
 			localStorage.setItem(
 				`quiz_answers_${quiz.id}`,
-				JSON.stringify({ quizId: quiz.id, answers }),
+				JSON.stringify({ quizId: quiz.id, answers: newAnswers }),
 			);
-			// All questions answered, redirect to result
 			navigate(`/student/result/${quiz.id}`);
 		}
 	};
@@ -126,18 +133,35 @@ function StudentQuiz() {
 					<div className="mb-2">{question.text}</div>
 					{question.type === "multiple-choice" ? (
 						<div className="space-y-2">
-							{question.options.map((opt) => (
-								<label key={opt.id} className="flex items-center gap-2">
-									<input
-										type="radio"
-										name="option"
-										value={opt.id}
-										checked={selectedOption === opt.id}
-										onChange={() => setSelectedOption(opt.id)}
-									/>
-									{opt.text}
-								</label>
-							))}
+							{isMultiple
+								? question.options.map((opt) => (
+										<label key={opt.id} className="flex items-center gap-2">
+											<input
+												type="checkbox"
+												checked={selectedOptions.includes(opt.id)}
+												onChange={() => {
+													setSelectedOptions((prev) =>
+														prev.includes(opt.id)
+															? prev.filter((id) => id !== opt.id)
+															: [...prev, opt.id],
+													);
+												}}
+											/>
+											{opt.text}
+										</label>
+									))
+								: question.options.map((opt) => (
+										<label key={opt.id} className="flex items-center gap-2">
+											<input
+												type="radio"
+												name="option"
+												value={opt.id}
+												checked={selectedOptions[0] === opt.id}
+												onChange={() => setSelectedOptions([opt.id])}
+											/>
+											{opt.text}
+										</label>
+									))}
 						</div>
 					) : (
 						<input

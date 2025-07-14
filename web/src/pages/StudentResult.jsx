@@ -60,11 +60,31 @@ function StudentResult() {
 				return;
 			}
 			if (q.type === "multiple-choice") {
-				const correctOption = q.options.find((opt) => opt.is_correct);
-				if (Number(ans) === correctOption.id) {
-					correct++;
+				const correctOptions = q.options
+					.filter((opt) => opt.is_correct)
+					.map((opt) => opt.id)
+					.sort();
+				// If answer is array (multiple correct), compare sorted arrays
+				if (Array.isArray(ans)) {
+					const ansArr = ans.map(Number).sort();
+					if (
+						correctOptions.length === ansArr.length &&
+						correctOptions.every((id, idx) => id === ansArr[idx])
+					) {
+						correct++;
+					} else {
+						incorrect++;
+					}
 				} else {
-					incorrect++;
+					// Single correct
+					if (
+						Number(ans) === correctOptions[0] &&
+						correctOptions.length === 1
+					) {
+						correct++;
+					} else {
+						incorrect++;
+					}
 				}
 			} else if (q.type === "text") {
 				if (
