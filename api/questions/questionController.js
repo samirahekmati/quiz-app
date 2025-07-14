@@ -1,49 +1,47 @@
-import db, { pool } from "../db.js";
 import logger from "../utils/logger.js";
+
+import { z, ZodError } from "zod";
+
+export const createQuestionSchema = z.object({
+	text: z.string().min(1, "Question text is required."),
+	type: z
+	  .enum(["multiple_choice", "true_false", "fill_in_blank"])
+	  .optional(),
+	options: z
+	  .array(
+		z.object({
+		  text: z.string().min(1, "Option text is required."),
+		  is_correct: z.boolean(),
+		})
+	  )
+	  .min(2, "At least two options are required."),
+  });
 
 // Create a question along with its options for a given quiz
 export async function createQuestion(req, res) {
 	console.log("req.params:", req.params);
 	const { quizId } = req.params;
-	const { text, type, options } = req.body;
+	//const { text, type, options } = req.body;
 
 	// Validate quizId
 	if (!quizId || isNaN(Number(quizId))) {
 		return res.status(400).json({ message: "Valid quizId is required in the URL." });
 	}
 
-	// Validate question text
-	if (!text || typeof text !== "string" || text.trim() === "") {
-		return res.status(400).json({ message: "Question text is required." });
-	}
+  // Validate request body using Zod
+  const parseResult = createQuestionSchema.safeParse(req.body);
 
-	//validate question type
-	const allowedTypes = ['multiple_choice', 'true_false', 'fill_in_blank'];
+  if (!parseResult.success) {
+	// Get the first error message (for response)
+    const errorMessage =
+      parseResult.error.errors?.[0]?.message || "Invalid input data";
+// Log full detailed validation errors for debugging
+logger.error("Validation error:", parseResult.error.format());
+logger.error(`Validation error: ${errorMessage}`);
+    return res.status(400).json({ message: errorMessage });
+  }
 
-	if (type && !allowedTypes.includes(type)) {
-	  return res.status(400).json({ 
-		message: `Invalid question type. Allowed types: ${allowedTypes.join(', ')}`
-	  });
-	}
-
-	// Validate options array
-	if (!Array.isArray(options) || options.length < 2) {
-		return res.status(400).json({ message: "At least two options are required." });
-	}
-
-	// Validate each option
-	for (const option of options) {
-		if (
-			!option.text ||
-			typeof option.text !== "string" ||
-			typeof option.is_correct !== "boolean" ||
-			option.text.trim() === ""
-		) {
-			return res.status(400).json({
-				message: "Each option must have 'text' (string) and 'is_correct' (boolean).",
-			});
-		}
-	}
+  const { text, type = "multiple_choice", options } = parseResult.data;
 
 	const client = await pool.connect();
 
@@ -90,10 +88,23 @@ export async function createQuestion(req, res) {
 	}
 }
 
+
+
+const optionSchema = z.object({
+	id: z.number().optional(), // For existing options that have an ID
+	text: z.string().min(1, "Option text is required"),
+	is_correct: z.boolean(),
+  });
+  
+  const updateQuestionSchema = z.object({
+	text: z.string().min(1, "Question text is required"),
+	type: z.enum(['multiple_choice', 'true_false', 'fill_in_blank']).optional(),
+	options: z.array(optionSchema).min(2, "At least two options are required"),
+  });
+
 // update question and options
 export async function updateQuestion(req, res) {
 	const { quizId, questionId } = req.params;
-	const { text, type, options } = req.body;
 
 	// Validate quizId and questionId
 	if (!quizId || isNaN(Number(quizId))) {
@@ -103,31 +114,23 @@ export async function updateQuestion(req, res) {
 		return res.status(400).json({ message: "Valid questionId is required in the URL." });
 	  }
 
-    // Validate question text
-	if (!text || typeof text !== "string" || text.trim() === "") {
-	  return res.status(400).json({ message: "Question text is required." });
+  // Validate request body with Zod schema
+  let validatedBody;
+  try {
+	validatedBody = updateQuestionSchema.parse(req.body);
+  } catch (error) {
+	if (error instanceof ZodError) {
+	  // error.errors is guaranteed to exist here
+	  const errors = error.issues.map(e => `${e.path.join('.')} - ${e.message}`);
+	  return res.status(400).json({ message: errors.join('; ') });
+	} else {
+	  // For other types of errors
+	  return res.status(400).json({ message: error.message || "Unknown error" });
 	}
-
-	// Validate question type
-	const allowedTypes = ['multiple_choice', 'true_false', 'fill_in_blank'];
-	if (type && !allowedTypes.includes(type)) {
-	  return res.status(400).json({ message: `Invalid question type. Allowed types: ${allowedTypes.join(", ")}` });
-	}
-
-	// Validate options array
-	if (!Array.isArray(options) || options.length < 2) {
-	  return res.status(400).json({ message: "At least two options are required." });
-	}
-	// Validate each option
-	for (const option of options) {
-		if (!option.text || typeof option.text !== "string" || option.text.trim() === "") {
-		  return res.status(400).json({ message: "Each option must have non-empty 'text' (string)." });
-		}
-		if (typeof option.is_correct !== "boolean") {
-		  return res.status(400).json({ message: "Each option must have 'is_correct' (boolean)." });
-		}
-	  }
+  }
 	
+	const { text, type, options } = validatedBody;
+
 	// Connect to DB only after validations
 	const client = await pool.connect();
   

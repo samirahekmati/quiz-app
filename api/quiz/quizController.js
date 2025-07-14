@@ -1,24 +1,37 @@
 import db from "../db.js";
 import logger from "../utils/logger.js";
 
+import { z } from "zod";
+
+// Define the schema for quiz creation
+const createQuizSchema = z.object({
+	title: z.string().nonempty("Title is required and must be a non-empty string."),
+	description: z.string().optional(),
+	duration: z
+	  .number({ invalid_type_error: "Duration must be a number." })
+	  .positive("Duration must be a positive number."),
+  });
+
 // Create a new quiz
 export async function createQuiz(req, res) {
-	const { title, description, duration } = req.body;
-
-	// Validate title
-	if (!title || typeof title !== "string" || title.trim() === "") {
-		return res.status(400).json({ message: "Title is required and must be a non-empty string." });
-	}
-
-	// Validate duration
-	if (
-		duration === undefined ||
-		isNaN(Number(duration)) ||
-		Number(duration) <= 0
-	) {
-		return res.status(400).json({ message: "Duration is required and must be a positive number." });
-	}
+	// Validate req.body using Zod
+	const parseResult = createQuizSchema.safeParse({
+		...req.body,
+		// Make sure to convert duration to a number since it might come as string
+		duration: Number(req.body.duration),
+	  });
 	
+	  if (!parseResult.success) {
+		const errorMessage =
+		parseResult.error.errors?.[0]?.message || "Invalid input data";
+		// Log validation error to your logger
+		logger.error(`Validation error: ${errorMessage}`);
+		// Send first validation error message
+		return res.status(400).json({ message: errorMessage });
+	  }
+	
+	  const { title, description, duration } = parseResult.data;
+
 
 	try {
 		const result = await db.query(
