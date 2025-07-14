@@ -39,11 +39,10 @@ CREATE TABLE public.quizzes (
 
 CREATE TABLE public.questions (
 	id serial4 NOT NULL,
-	quiz_id int4 NULL,
+	quiz_id int4 NOT NULL,
 	"text" text NOT NULL,
 	"type" varchar(50) DEFAULT 'multiple_choice'::character varying NULL,
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
-	difficulty_level public.difficulty_enum NULL,
 	CONSTRAINT questions_pkey PRIMARY KEY (id),
 	CONSTRAINT questions_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(id) ON DELETE CASCADE
 );

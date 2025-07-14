@@ -5,14 +5,44 @@ import logger from "../utils/logger.js";
 export async function createQuestion(req, res) {
 	console.log("req.params:", req.params);
 	const { quizId } = req.params;
-	const { text, type, difficulty_level, options } = req.body;
+	const { text, type, options } = req.body;
 
-	if (!text) {
+	// Validate quizId
+	if (!quizId || isNaN(Number(quizId))) {
+		return res.status(400).json({ message: "Valid quizId is required in the URL." });
+	}
+
+	// Validate question text
+	if (!text || typeof text !== "string" || text.trim() === "") {
 		return res.status(400).json({ message: "Question text is required." });
 	}
 
-	if (!Array.isArray(options) || options.length === 0) {
-		return res.status(400).json({ message: "At least one option is required." });
+	//validate question type
+	const allowedTypes = ['multiple_choice', 'true_false', 'fill_in_blank'];
+
+	if (type && !allowedTypes.includes(type)) {
+	  return res.status(400).json({ 
+		message: `Invalid question type. Allowed types: ${allowedTypes.join(', ')}`
+	  });
+	}
+
+	// Validate options array
+	if (!Array.isArray(options) || options.length < 2) {
+		return res.status(400).json({ message: "At least two options are required." });
+	}
+
+	// Validate each option
+	for (const option of options) {
+		if (
+			!option.text ||
+			typeof option.text !== "string" ||
+			typeof option.is_correct !== "boolean" ||
+			option.text.trim() === ""
+		) {
+			return res.status(400).json({
+				message: "Each option must have 'text' (string) and 'is_correct' (boolean).",
+			});
+		}
 	}
 
 	const client = await pool.connect();
@@ -22,10 +52,10 @@ export async function createQuestion(req, res) {
 
 		// Insert the question
 		const questionResult = await client.query(
-			`INSERT INTO questions (quiz_id, text, type, difficulty_level)
-			 VALUES ($1, $2, $3, $4)
-			 RETURNING id, quiz_id, text, type, difficulty_level`,
-			[quizId, text, type || "multiple_choice", difficulty_level || null]
+			`INSERT INTO questions (quiz_id, text, type)
+			 VALUES ($1, $2, $3)
+			 RETURNING id, quiz_id, text, type`,
+			[quizId, text, type || "multiple_choice"]
 		);
 
 		const question = questionResult.rows[0];
@@ -63,15 +93,42 @@ export async function createQuestion(req, res) {
 // update question and options
 export async function updateQuestion(req, res) {
 	const { quizId, questionId } = req.params;
-	const { text, type, difficulty_level, options } = req.body;
-  
-	if (!text) {
+	const { text, type, options } = req.body;
+
+	// Validate quizId and questionId
+	if (!quizId || isNaN(Number(quizId))) {
+		return res.status(400).json({ message: "Valid quizId is required in the URL." });
+	  }
+	if (!questionId || isNaN(Number(questionId))) {
+		return res.status(400).json({ message: "Valid questionId is required in the URL." });
+	  }
+
+    // Validate question text
+	if (!text || typeof text !== "string" || text.trim() === "") {
 	  return res.status(400).json({ message: "Question text is required." });
 	}
-	if (!Array.isArray(options) || options.length === 0) {
-	  return res.status(400).json({ message: "At least one option is required." });
+
+	// Validate question type
+	const allowedTypes = ['multiple_choice', 'true_false', 'fill_in_blank'];
+	if (type && !allowedTypes.includes(type)) {
+	  return res.status(400).json({ message: `Invalid question type. Allowed types: ${allowedTypes.join(", ")}` });
 	}
-  
+
+	// Validate options array
+	if (!Array.isArray(options) || options.length < 2) {
+	  return res.status(400).json({ message: "At least two options are required." });
+	}
+	// Validate each option
+	for (const option of options) {
+		if (!option.text || typeof option.text !== "string" || option.text.trim() === "") {
+		  return res.status(400).json({ message: "Each option must have non-empty 'text' (string)." });
+		}
+		if (typeof option.is_correct !== "boolean") {
+		  return res.status(400).json({ message: "Each option must have 'is_correct' (boolean)." });
+		}
+	  }
+	
+	// Connect to DB only after validations
 	const client = await pool.connect();
   
 	try {
@@ -90,8 +147,8 @@ export async function updateQuestion(req, res) {
   
 	  // Update the question
 	  await client.query(
-		`UPDATE questions SET text = $1, type = $2, difficulty_level = $3 WHERE id = $4`,
-		[text, type || "multiple_choice", difficulty_level || null, questionId]
+		`UPDATE questions SET text = $1, type = $2 WHERE id = $3`,
+		[text, type || "multiple_choice", questionId]
 	  );
   
 	  // Fetch existing option IDs for this question
@@ -120,6 +177,10 @@ export async function updateQuestion(req, res) {
 		}
   
 		if (option.id) {
+		// Make sure id is a valid number before running update
+		if (isNaN(Number(option.id))) {
+			throw new Error(`Invalid option id: ${option.id}`);
+		  }
 		  // Update existing option
 		  await client.query(
 			`UPDATE options SET text = $1, is_correct = $2 WHERE id = $3 AND question_id = $4`,

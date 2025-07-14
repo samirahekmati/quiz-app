@@ -5,11 +5,20 @@ import logger from "../utils/logger.js";
 export async function createQuiz(req, res) {
 	const { title, description, duration } = req.body;
 
-	if (!title || !duration) {
-		return res.status(400).json({
-			message: "Title and duration are required.",
-		});
+	// Validate title
+	if (!title || typeof title !== "string" || title.trim() === "") {
+		return res.status(400).json({ message: "Title is required and must be a non-empty string." });
 	}
+
+	// Validate duration
+	if (
+		duration === undefined ||
+		isNaN(Number(duration)) ||
+		Number(duration) <= 0
+	) {
+		return res.status(400).json({ message: "Duration is required and must be a positive number." });
+	}
+	
 
 	try {
 		const result = await db.query(
@@ -41,7 +50,7 @@ export async function getQuizById(req, res) {
 		`
 		SELECT 
 		  q.id as quiz_id, q.title, q.description, q.duration,
-		  qs.id as question_id, qs.text as question_text, qs.type, qs.difficulty_level,
+		  qs.id as question_id, qs.text as question_text, qs.type,
 		  o.id as option_id, o.text as option_text, o.is_correct
 		FROM quizzes q
 		LEFT JOIN questions qs ON qs.quiz_id = q.id
@@ -56,12 +65,13 @@ export async function getQuizById(req, res) {
 		return res.status(404).json({ message: "Quiz not found" });
 	  }
   
-	  // Transform flat rows into nested structure
+	  // Use the first row as the base quiz object
+	  const base = result.rows[0];
 	  const quizData = {
-		id: result.rows[0].quiz_id,
-		title: result.rows[0].title,
-		description: result.rows[0].description,
-		duration: result.rows[0].duration,
+		id: base.quiz_id,
+		title: base.title,
+		description: base.description,
+		duration: base.duration,
 		questions: [],
 	  };
   
@@ -75,7 +85,6 @@ export async function getQuizById(req, res) {
 			id: row.question_id,
 			text: row.question_text,
 			type: row.type,
-			difficulty_level: row.difficulty_level,
 			options: [],
 		  });
 		}
