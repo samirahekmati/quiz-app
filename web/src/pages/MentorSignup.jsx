@@ -52,7 +52,10 @@ function MentorSignup() {
 			password,
 		};
 		setMentors([...mentors, newMentor]);
-		// Redirect to dashboard (in production, set session/auth)
+		// MVP ONLY: Save mentor id to localStorage for session
+		// In production, use session/auth backend
+		localStorage.setItem("currentMentorId", newMentor.id);
+		// Redirect to dashboard
 		navigate("/mentor/dashboard");
 	};
 

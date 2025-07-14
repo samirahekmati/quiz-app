@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Mock data for quizzes (based on database structure)
+// Mock data for quizzes (should be replaced with API/backend later)
 const initialMockQuizzes = [
 	{
 		id: 1,
-		user_id: 101,
+		user_id: 1,
 		title: "JavaScript Basics",
 		description: "A quiz about JS fundamentals.",
 		duration: 900, // seconds (15 min)
 	},
 	{
 		id: 2,
-		user_id: 101,
+		user_id: 2,
 		title: "React Intro",
 		description: "Test your React knowledge!",
 		duration: 600, // seconds (10 min)
@@ -20,32 +20,43 @@ const initialMockQuizzes = [
 ];
 
 function MentorDashboard() {
-	// State for quizzes
+	// Get current mentor ID from localStorage (MVP ONLY)
+	// In production, get from session/auth backend
+	const currentMentorId = Number(localStorage.getItem("currentMentorId"));
 	const [quizzes, setQuizzes] = useState(initialMockQuizzes);
-	// State for form fields
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [duration, setDuration] = useState(""); // in minutes
 	const navigate = useNavigate();
 
+	// Filter quizzes for current mentor (MVP ONLY)
+	// In production, fetch quizzes for this mentor from backend/database
+	const myQuizzes = quizzes.filter((q) => q.user_id === currentMentorId);
+
 	// Handle form submit for creating a new quiz
 	const handleCreateQuiz = (e) => {
 		e.preventDefault();
-		// Simple validation
 		if (!title.trim() || !duration) return;
 		// Create new quiz object
 		const newQuiz = {
-			id: quizzes.length ? quizzes[quizzes.length - 1].id + 1 : 1, // simple id
-			user_id: 101, // mock mentor id
+			id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1, // unique id
+			user_id: currentMentorId, // assign to current mentor
 			title,
 			description,
 			duration: Number(duration) * 60, // convert to seconds
 		};
-		// Add to quizzes list
 		setQuizzes([...quizzes, newQuiz]);
-		// Redirect to edit page for this quiz
 		navigate(`/mentor/quiz/${newQuiz.id}/edit`);
 	};
+
+	// If not logged in, show message (MVP ONLY)
+	if (!currentMentorId) {
+		return (
+			<div className="p-4 text-center text-red-600">
+				You must be logged in as a mentor to view your dashboard.
+			</div>
+		);
+	}
 
 	return (
 		<div className="p-4 max-w-2xl mx-auto">
@@ -99,13 +110,13 @@ function MentorDashboard() {
 					Create New Quiz
 				</button>
 			</form>
-			{/* List of quizzes */}
+			{/* List of quizzes for current mentor */}
 			<div>
-				{quizzes.length === 0 ? (
+				{myQuizzes.length === 0 ? (
 					<p>No quizzes yet.</p>
 				) : (
 					<ul className="space-y-4">
-						{quizzes.map((quiz) => (
+						{myQuizzes.map((quiz) => (
 							<li key={quiz.id} className="border p-4 rounded shadow-sm">
 								<div className="font-semibold text-lg">{quiz.title}</div>
 								<div className="text-gray-600 mb-2">{quiz.description}</div>
