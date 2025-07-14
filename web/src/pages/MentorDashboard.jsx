@@ -1,51 +1,45 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Mock data for quizzes (should be replaced with API/backend later)
-const initialMockQuizzes = [
-	{
-		id: 1,
-		user_id: 1,
-		title: "JavaScript Basics",
-		description: "A quiz about JS fundamentals.",
-		duration: 900, // seconds (15 min)
-	},
-	{
-		id: 2,
-		user_id: 2,
-		title: "React Intro",
-		description: "Test your React knowledge!",
-		duration: 600, // seconds (10 min)
-	},
-];
+// Helper to load quizzes from localStorage
+const loadQuizzes = () => {
+	const saved = localStorage.getItem("quizzes");
+	return saved ? JSON.parse(saved) : [];
+};
 
 function MentorDashboard() {
 	// Get current mentor ID from localStorage (MVP ONLY)
 	// In production, get from session/auth backend
 	const currentMentorId = Number(localStorage.getItem("currentMentorId"));
-	const [quizzes, setQuizzes] = useState(initialMockQuizzes);
+	const [quizzes, setQuizzes] = useState(loadQuizzes());
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [duration, setDuration] = useState(""); // in minutes
 	const navigate = useNavigate();
 
-	// Filter quizzes for current mentor (MVP ONLY)
-	// In production, fetch quizzes for this mentor from backend/database
+	// Only quizzes for this mentor
 	const myQuizzes = quizzes.filter((q) => q.user_id === currentMentorId);
+
+	// Save quizzes to localStorage whenever they change
+	const saveQuizzes = (newQuizzes) => {
+		setQuizzes(newQuizzes);
+		localStorage.setItem("quizzes", JSON.stringify(newQuizzes));
+	};
 
 	// Handle form submit for creating a new quiz
 	const handleCreateQuiz = (e) => {
 		e.preventDefault();
 		if (!title.trim() || !duration) return;
-		// Create new quiz object
 		const newQuiz = {
-			id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1, // unique id
-			user_id: currentMentorId, // assign to current mentor
+			id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1,
+			user_id: currentMentorId,
 			title,
 			description,
-			duration: Number(duration) * 60, // convert to seconds
+			duration: Number(duration) * 60,
+			questions: [], // always add empty questions array for new quiz
 		};
-		setQuizzes([...quizzes, newQuiz]);
+		const updated = [...quizzes, newQuiz];
+		saveQuizzes(updated);
 		navigate(`/mentor/quiz/${newQuiz.id}/edit`);
 	};
 

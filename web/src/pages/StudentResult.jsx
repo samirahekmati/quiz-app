@@ -1,38 +1,10 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 
-// Mock quiz data (should be replaced with API/backend later)
-const mockQuiz = {
-	id: 1,
-	title: "JavaScript Basics",
-	questions: [
-		{
-			id: 101,
-			text: "What is the result of 2 + 2 in JavaScript?",
-			type: "multiple-choice",
-			options: [
-				{ id: 1, text: "4", is_correct: true },
-				{ id: 2, text: "22", is_correct: false },
-				{ id: 3, text: "NaN", is_correct: false },
-			],
-		},
-		{
-			id: 102,
-			text: "Which of these are JavaScript data types?",
-			type: "multiple-choice",
-			options: [
-				{ id: 4, text: "String", is_correct: true },
-				{ id: 5, text: "Boolean", is_correct: true },
-				{ id: 6, text: "Float", is_correct: false },
-			],
-		},
-		{
-			id: 103,
-			text: "What is the output of console.log(typeof null)?",
-			type: "text",
-			correct_answer: "object",
-		},
-	],
+// Helper to load quizzes from localStorage
+const loadQuizzes = () => {
+	const saved = localStorage.getItem("quizzes");
+	return saved ? JSON.parse(saved) : [];
 };
 
 function StudentResult() {
@@ -41,30 +13,32 @@ function StudentResult() {
 	const [result, setResult] = useState(null);
 
 	useEffect(() => {
-		// MVP ONLY: Read answers from localStorage
-		// In production, this will be replaced by API/backend call
 		const data = localStorage.getItem(`quiz_answers_${quizId}`);
 		if (!data) {
 			setResult({ error: "No answers found for this quiz." });
 			return;
 		}
 		const { answers } = JSON.parse(data);
-		const quiz = mockQuiz; // In real app, fetch by quizId
+		const quizzes = loadQuizzes();
+		const quiz = quizzes.find((q) => q.id === Number(quizId));
+		if (!quiz) {
+			setResult({ error: "Quiz not found." });
+			return;
+		}
 		let correct = 0;
 		let incorrect = 0;
 		let unanswered = 0;
-		quiz.questions.forEach((q) => {
+		(quiz.questions || []).forEach((q) => {
 			const ans = answers[q.id];
 			if (ans === undefined) {
 				unanswered++;
 				return;
 			}
 			if (q.type === "multiple-choice") {
-				const correctOptions = q.options
+				const correctOptions = (q.options || [])
 					.filter((opt) => opt.is_correct)
 					.map((opt) => opt.id)
 					.sort();
-				// If answer is array (multiple correct), compare sorted arrays
 				if (Array.isArray(ans)) {
 					const ansArr = ans.map(Number).sort();
 					if (
@@ -76,7 +50,6 @@ function StudentResult() {
 						incorrect++;
 					}
 				} else {
-					// Single correct
 					if (
 						Number(ans) === correctOptions[0] &&
 						correctOptions.length === 1
@@ -88,7 +61,8 @@ function StudentResult() {
 				}
 			} else if (q.type === "text") {
 				if (
-					ans.trim().toLowerCase() === q.correct_answer.trim().toLowerCase()
+					ans.trim().toLowerCase() ===
+					(q.correct_answer || "").trim().toLowerCase()
 				) {
 					correct++;
 				} else {

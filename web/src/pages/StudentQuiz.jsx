@@ -1,38 +1,10 @@
 import { useState } from "react";
 import { useParams, useNavigate } from "react-router";
 
-// Mock quiz data (should be replaced with API/backend later)
-const mockQuiz = {
-	id: 1,
-	title: "JavaScript Basics",
-	questions: [
-		{
-			id: 101,
-			text: "What is the result of 2 + 2 in JavaScript?",
-			type: "multiple-choice",
-			options: [
-				{ id: 1, text: "4", is_correct: true },
-				{ id: 2, text: "22", is_correct: false },
-				{ id: 3, text: "NaN", is_correct: false },
-			],
-		},
-		{
-			id: 102,
-			text: "Which of these are JavaScript data types?",
-			type: "multiple-choice",
-			options: [
-				{ id: 4, text: "String", is_correct: true },
-				{ id: 5, text: "Boolean", is_correct: true },
-				{ id: 6, text: "Float", is_correct: false },
-			],
-		},
-		{
-			id: 103,
-			text: "What is the output of console.log(typeof null)?",
-			type: "text",
-			correct_answer: "object",
-		},
-	],
+// Helper to load quizzes from localStorage
+const loadQuizzes = () => {
+	const saved = localStorage.getItem("quizzes");
+	return saved ? JSON.parse(saved) : [];
 };
 
 function StudentQuiz() {
@@ -49,18 +21,17 @@ function StudentQuiz() {
 	// State for selected options (array for multiple correct)
 	const [selectedOptions, setSelectedOptions] = useState([]);
 
-	// Check if quizId matches mockQuiz.id (MVP only)
-	if (Number(quizId) !== mockQuiz.id) {
+	// Load quiz from localStorage
+	const quizzes = loadQuizzes();
+	const quiz = quizzes.find((q) => q.id === Number(quizId));
+	if (!quiz) {
 		return (
 			<div className="p-4 text-center text-red-600">
 				Quiz not found or invalid Quiz ID.
 			</div>
 		);
 	}
-
-	// Get quiz data (mock)
-	const quiz = mockQuiz; // In real app, fetch by quizId
-	const questions = quiz.questions;
+	const questions = quiz.questions || [];
 	const question = questions[current];
 	// Detect if multiple correct answers
 	const isMultiple =

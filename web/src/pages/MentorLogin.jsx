@@ -1,27 +1,17 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Mock mentors array (should be replaced with API/backend later)
-const initialMockMentors = [
-	{
-		id: 1,
-		username: "mentor1",
-		email: "mentor1@example.com",
-		password: "pass1234",
-	},
-	{
-		id: 2,
-		username: "pooriya",
-		email: "example@example.com",
-		password: "pass1234",
-	},
-];
+// Helper to load mentors from localStorage
+const loadMentors = () => {
+	const saved = localStorage.getItem("mentors");
+	return saved ? JSON.parse(saved) : [];
+};
 
 function MentorLogin() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
-	const [mentors] = useState(initialMockMentors); // read-only for login
+	const [mentors] = useState(loadMentors()); // read-only for login
 	const navigate = useNavigate();
 
 	// Simple email format check

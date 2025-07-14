@@ -1,23 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Mock quizzes (should be replaced with API/backend later)
-const mockQuizzes = [
-	{ id: 1, title: "JavaScript Basics" },
-	{ id: 2, title: "React Intro" },
-];
-
-// Mock students per quiz (should be replaced with API/backend later)
-const initialMockStudents = {
-	1: ["ali"], // quizId: [usernames]
-	2: ["sara"],
+// Helper to load quizzes from localStorage
+const loadQuizzes = () => {
+	const saved = localStorage.getItem("quizzes");
+	return saved ? JSON.parse(saved) : [];
 };
 
 function StudentJoin() {
 	const [username, setUsername] = useState("");
 	const [quizId, setQuizId] = useState("");
 	const [error, setError] = useState("");
-	const [students, setStudents] = useState(initialMockStudents);
+	const [students, setStudents] = useState({}); // Initialize as empty object
+	const [quizzes] = useState(loadQuizzes());
 	const navigate = useNavigate();
 
 	// Handle form submit
@@ -26,7 +21,7 @@ function StudentJoin() {
 		setError("");
 		const id = Number(quizId);
 		// Check quiz ID exists
-		const quizExists = mockQuizzes.some((q) => q.id === id);
+		const quizExists = quizzes.some((q) => q.id === id);
 		if (!quizExists) {
 			setError("Quiz ID is invalid.");
 			return;

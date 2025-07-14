@@ -1,24 +1,33 @@
 import { useState } from "react";
+import { useParams, useNavigate } from "react-router";
 
-// Supported question types
-const QUESTION_TYPES = [
-	{ value: "multiple-choice", label: "Multiple Choice" },
-	{ value: "text", label: "Text" },
-];
-
-const DIFFICULTY_LEVELS = [
-	{ value: "1", label: "Easy" },
-	{ value: "2", label: "Medium" },
-	{ value: "3", label: "Hard" },
-];
+// MVP ONLY: Load quizzes from localStorage or use empty array
+// In production, fetch from backend/database
+const loadQuizzes = () => {
+	const saved = localStorage.getItem("quizzes");
+	return saved ? JSON.parse(saved) : [];
+};
 
 function QuizEdit() {
-	// State for all questions
-	const [questions, setQuestions] = useState([]);
+	const { quizId } = useParams();
+	const navigate = useNavigate();
+	const currentMentorId = Number(localStorage.getItem("currentMentorId"));
+	// Load quizzes (MVP ONLY)
+	const [quizzes, setQuizzes] = useState(loadQuizzes());
+	// Find current quiz (MVP ONLY)
+	const quizIndex = quizzes.findIndex((q) => q.id === Number(quizId));
+	// Always preserve user_id
+	const quiz = quizzes[quizIndex] || {
+		id: Number(quizId),
+		user_id: currentMentorId,
+		questions: [],
+	};
+	// State for all questions (nested in quiz)
+	const [questions, setQuestions] = useState(quiz.questions || []);
 	// State for current question form
 	const [questionText, setQuestionText] = useState("");
-	const [questionType, setQuestionType] = useState(QUESTION_TYPES[0].value);
-	const [difficulty, setDifficulty] = useState(DIFFICULTY_LEVELS[0].value);
+	const [questionType, setQuestionType] = useState("multiple-choice");
+	const [difficulty, setDifficulty] = useState("1");
 	const [correctAnswer, setCorrectAnswer] = useState(""); // for text type
 	// State for options (for multiple-choice): array of { text, is_correct }
 	const [optionFields, setOptionFields] = useState([
@@ -67,33 +76,50 @@ function QuizEdit() {
 				!validOptions.some((opt) => opt.is_correct)
 			)
 				return;
+			// Assign unique ids to options
+			const questionId = questions.length
+				? Math.max(...questions.map((q) => q.id)) + 1
+				: 1;
+			const optionsWithIds = validOptions.map((opt, idx) => ({
+				id: idx + 1,
+				question_id: questionId,
+				text: opt.text,
+				is_correct: opt.is_correct,
+			}));
 			const newQuestion = {
-				id: questions.length ? questions[questions.length - 1].id + 1 : 1,
+				id: questionId,
+				quiz_id: Number(quizId),
 				text: questionText,
 				type: questionType,
 				difficulty,
-				options: validOptions,
+				options: optionsWithIds,
 			};
 			setQuestions([...questions, newQuestion]);
 			// Reset form
 			setQuestionText("");
-			setQuestionType(QUESTION_TYPES[0].value);
-			setDifficulty(DIFFICULTY_LEVELS[0].value);
+			setQuestionType("multiple-choice");
+			setDifficulty("1");
+			setCorrectAnswer("");
 			resetOptionFields();
 		} else {
 			// For text type
+			const questionId = questions.length
+				? Math.max(...questions.map((q) => q.id)) + 1
+				: 1;
 			const newQuestion = {
-				id: questions.length ? questions[questions.length - 1].id + 1 : 1,
+				id: questionId,
+				quiz_id: Number(quizId),
 				text: questionText,
 				type: questionType,
 				difficulty,
 				correct_answer: correctAnswer,
+				options: [],
 			};
 			setQuestions([...questions, newQuestion]);
 			// Reset form
 			setQuestionText("");
-			setQuestionType(QUESTION_TYPES[0].value);
-			setDifficulty(DIFFICULTY_LEVELS[0].value);
+			setQuestionType("multiple-choice");
+			setDifficulty("1");
 			setCorrectAnswer("");
 			resetOptionFields();
 		}
@@ -122,6 +148,28 @@ function QuizEdit() {
 		}
 		// Remove from list (will re-add on save)
 		setQuestions(questions.filter((qq) => qq.id !== q.id));
+	};
+
+	// Finish quiz: save quiz with questions/options to localStorage (MVP ONLY)
+	// In production, send to backend/database
+	const handleFinishQuiz = () => {
+		const updatedQuiz = {
+			...quiz,
+			user_id: quiz.user_id || currentMentorId,
+			questions,
+		};
+		let updatedQuizzes;
+		if (quizIndex !== -1) {
+			updatedQuizzes = quizzes.map((q, i) =>
+				i === quizIndex ? updatedQuiz : q,
+			);
+		} else {
+			updatedQuizzes = [...quizzes, updatedQuiz];
+		}
+		setQuizzes(updatedQuizzes);
+		localStorage.setItem("quizzes", JSON.stringify(updatedQuizzes));
+		// Redirect to dashboard
+		navigate("/mentor/dashboard");
 	};
 
 	return (
@@ -154,11 +202,8 @@ function QuizEdit() {
 						value={questionType}
 						onChange={(e) => setQuestionType(e.target.value)}
 					>
-						{QUESTION_TYPES.map((t) => (
-							<option key={t.value} value={t.value}>
-								{t.label}
-							</option>
-						))}
+						<option value="multiple-choice">Multiple Choice</option>
+						<option value="text">Text</option>
 					</select>
 				</div>
 				<div>
@@ -171,11 +216,9 @@ function QuizEdit() {
 						value={difficulty}
 						onChange={(e) => setDifficulty(e.target.value)}
 					>
-						{DIFFICULTY_LEVELS.map((d) => (
-							<option key={d.value} value={d.value}>
-								{d.label}
-							</option>
-						))}
+						<option value="1">Easy</option>
+						<option value="2">Medium</option>
+						<option value="3">Hard</option>
 					</select>
 				</div>
 				{/* If type is text, show correct answer input */}
@@ -271,6 +314,13 @@ function QuizEdit() {
 					</ul>
 				)}
 			</div>
+			{/* Finish Quiz button */}
+			<button
+				className="mt-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
+				onClick={handleFinishQuiz}
+			>
+				Finish
+			</button>
 		</div>
 	);
 }

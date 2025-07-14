@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Mock mentors array (should be replaced with API/backend later)
-const initialMockMentors = [
-	{
-		id: 1,
-		username: "mentor1",
-		email: "mentor1@example.com",
-		password: "pass1234",
-	},
-];
+// Helper to load mentors from localStorage
+const loadMentors = () => {
+	const saved = localStorage.getItem("mentors");
+	return saved ? JSON.parse(saved) : [];
+};
 
 function MentorSignup() {
 	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
-	const [mentors, setMentors] = useState(initialMockMentors);
+	const [mentors, setMentors] = useState(loadMentors());
 	const navigate = useNavigate();
 
 	// Simple email format check
@@ -34,14 +30,12 @@ function MentorSignup() {
 			setError("Invalid email format.");
 			return;
 		}
-		// Check for duplicate email
 		if (
 			mentors.some((m) => m.email.toLowerCase() === email.trim().toLowerCase())
 		) {
 			setError("Email already exists.");
 			return;
 		}
-		// Assign unique id
 		const newId = mentors.length
 			? Math.max(...mentors.map((m) => m.id)) + 1
 			: 1;
@@ -51,11 +45,10 @@ function MentorSignup() {
 			email: email.trim().toLowerCase(),
 			password,
 		};
-		setMentors([...mentors, newMentor]);
-		// MVP ONLY: Save mentor id to localStorage for session
-		// In production, use session/auth backend
+		const updated = [...mentors, newMentor];
+		setMentors(updated);
+		localStorage.setItem("mentors", JSON.stringify(updated));
 		localStorage.setItem("currentMentorId", newMentor.id);
-		// Redirect to dashboard
 		navigate("/mentor/dashboard");
 	};
 
