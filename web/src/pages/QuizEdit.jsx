@@ -27,13 +27,15 @@ function QuizEdit() {
 	// State for current question form
 	const [questionText, setQuestionText] = useState("");
 	const [questionType, setQuestionType] = useState("multiple-choice");
-	const [difficulty, setDifficulty] = useState("1");
 	const [correctAnswer, setCorrectAnswer] = useState(""); // for text type
 	// State for options (for multiple-choice): array of { text, is_correct }
 	const [optionFields, setOptionFields] = useState([
 		{ text: "", is_correct: false },
 		{ text: "", is_correct: false },
 	]);
+	// State for editing (MVP ONLY)
+	// In production, use backend PATCH/PUT for editing questions
+	const [editingQuestionId, setEditingQuestionId] = useState(null);
 
 	// Handle change for each option field
 	const handleOptionChange = (idx, field, value) => {
@@ -62,13 +64,11 @@ function QuizEdit() {
 		]);
 	};
 
-	// Add question to questions list
+	// Add or update question in questions list
 	const handleAddQuestion = (e) => {
 		e.preventDefault();
 		if (!questionText.trim()) return;
-		// For text type, need correctAnswer
 		if (questionType === "text" && !correctAnswer.trim()) return;
-		// For multiple-choice, need at least 2 options with text and at least one correct
 		if (questionType === "multiple-choice") {
 			const validOptions = optionFields.filter((opt) => opt.text.trim());
 			if (
@@ -77,12 +77,12 @@ function QuizEdit() {
 			)
 				return;
 			// Assign unique ids to options
-			const questionId = questions.length
-				? Math.max(...questions.map((q) => q.id)) + 1
-				: 1;
+			const questionId =
+				editingQuestionId ||
+				(questions.length ? Math.max(...questions.map((q) => q.id)) + 1 : 1);
 			const optionsWithIds = validOptions.map((opt, idx) => ({
 				id: idx + 1,
-				question_id: questionId,
+				question_id: Number(quizId), // MVP ONLY: In production, backend assigns ids
 				text: opt.text,
 				is_correct: opt.is_correct,
 			}));
@@ -91,45 +91,62 @@ function QuizEdit() {
 				quiz_id: Number(quizId),
 				text: questionText,
 				type: questionType,
-				difficulty,
 				options: optionsWithIds,
 			};
-			setQuestions([...questions, newQuestion]);
+			let updatedQuestions;
+			if (editingQuestionId) {
+				// MVP ONLY: Update question in-place by id
+				// In production, send PATCH/PUT to backend
+				updatedQuestions = questions.map((q) =>
+					q.id === editingQuestionId ? newQuestion : q,
+				);
+			} else {
+				updatedQuestions = [...questions, newQuestion];
+			}
+			setQuestions(updatedQuestions);
 			// Reset form
 			setQuestionText("");
 			setQuestionType("multiple-choice");
-			setDifficulty("1");
 			setCorrectAnswer("");
 			resetOptionFields();
+			setEditingQuestionId(null);
 		} else {
 			// For text type
-			const questionId = questions.length
-				? Math.max(...questions.map((q) => q.id)) + 1
-				: 1;
+			const questionId =
+				editingQuestionId ||
+				(questions.length ? Math.max(...questions.map((q) => q.id)) + 1 : 1);
 			const newQuestion = {
 				id: questionId,
 				quiz_id: Number(quizId),
 				text: questionText,
 				type: questionType,
-				difficulty,
 				correct_answer: correctAnswer,
 				options: [],
 			};
-			setQuestions([...questions, newQuestion]);
+			let updatedQuestions;
+			if (editingQuestionId) {
+				// MVP ONLY: Update question in-place by id
+				// In production, send PATCH/PUT to backend
+				updatedQuestions = questions.map((q) =>
+					q.id === editingQuestionId ? newQuestion : q,
+				);
+			} else {
+				updatedQuestions = [...questions, newQuestion];
+			}
+			setQuestions(updatedQuestions);
 			// Reset form
 			setQuestionText("");
 			setQuestionType("multiple-choice");
-			setDifficulty("1");
 			setCorrectAnswer("");
 			resetOptionFields();
+			setEditingQuestionId(null);
 		}
 	};
 
-	// Edit question (simple: load to form)
+	// Edit question (load to form, do not remove from list)
 	const handleEditQuestion = (q) => {
 		setQuestionText(q.text);
 		setQuestionType(q.type);
-		setDifficulty(q.difficulty);
 		setCorrectAnswer(q.correct_answer || "");
 		if (q.type === "multiple-choice") {
 			setOptionFields(
@@ -146,8 +163,16 @@ function QuizEdit() {
 		} else {
 			resetOptionFields();
 		}
-		// Remove from list (will re-add on save)
-		setQuestions(questions.filter((qq) => qq.id !== q.id));
+		setEditingQuestionId(q.id);
+	};
+
+	// Cancel editing
+	const handleCancelEdit = () => {
+		setQuestionText("");
+		setQuestionType("multiple-choice");
+		setCorrectAnswer("");
+		resetOptionFields();
+		setEditingQuestionId(null);
 	};
 
 	// Finish quiz: save quiz with questions/options to localStorage (MVP ONLY)
@@ -206,21 +231,6 @@ function QuizEdit() {
 						<option value="text">Text</option>
 					</select>
 				</div>
-				<div>
-					<label htmlFor="difficulty" className="block font-medium mb-1">
-						Difficulty
-					</label>
-					<select
-						id="difficulty"
-						className="border rounded px-2 py-1 w-full"
-						value={difficulty}
-						onChange={(e) => setDifficulty(e.target.value)}
-					>
-						<option value="1">Easy</option>
-						<option value="2">Medium</option>
-						<option value="3">Hard</option>
-					</select>
-				</div>
 				{/* If type is text, show correct answer input */}
 				{questionType === "text" && (
 					<div>
@@ -277,12 +287,23 @@ function QuizEdit() {
 						)}
 					</div>
 				)}
-				<button
-					type="submit"
-					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-				>
-					Save Question
-				</button>
+				<div className="flex gap-2">
+					<button
+						type="submit"
+						className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					>
+						{editingQuestionId ? "Save Changes" : "Save Question"}
+					</button>
+					{editingQuestionId && (
+						<button
+							type="button"
+							className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+							onClick={handleCancelEdit}
+						>
+							Cancel
+						</button>
+					)}
+				</div>
 			</form>
 			{/* List of questions */}
 			<div>
@@ -299,9 +320,7 @@ function QuizEdit() {
 								<div>
 									<span className="font-bold mr-2">Q{idx + 1}:</span>
 									<span>{q.text}</span>
-									<span className="ml-2 text-xs text-gray-500">
-										[{q.type}, Difficulty: {q.difficulty}]
-									</span>
+									<span className="ml-2 text-xs text-gray-500">[{q.type}]</span>
 								</div>
 								<button
 									className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"

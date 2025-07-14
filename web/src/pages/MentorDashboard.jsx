@@ -118,7 +118,10 @@ function MentorDashboard() {
 									Duration: {quiz.duration / 60} min
 								</div>
 								{/* Edit button (no action yet) */}
-								<button className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm">
+								<button
+									className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+									onClick={() => navigate(`/mentor/quiz/${quiz.id}/edit`)}
+								>
 									Edit
 								</button>
 							</li>
