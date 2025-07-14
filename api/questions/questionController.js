@@ -1,3 +1,4 @@
+import  { pool } from "../db.js";
 import logger from "../utils/logger.js";
 
 import { z, ZodError } from "zod";
@@ -88,8 +89,6 @@ logger.error(`Validation error: ${errorMessage}`);
 	}
 }
 
-
-
 const optionSchema = z.object({
 	id: z.number().optional(), // For existing options that have an ID
 	text: z.string().min(1, "Option text is required"),
@@ -175,15 +174,8 @@ export async function updateQuestion(req, res) {
   
 	  // Insert or update options
 	  for (const option of options) {
-		if (!option.text) {
-		  throw new Error("Each option must have text.");
-		}
-  
+		
 		if (option.id) {
-		// Make sure id is a valid number before running update
-		if (isNaN(Number(option.id))) {
-			throw new Error(`Invalid option id: ${option.id}`);
-		  }
 		  // Update existing option
 		  await client.query(
 			`UPDATE options SET text = $1, is_correct = $2 WHERE id = $3 AND question_id = $4`,
