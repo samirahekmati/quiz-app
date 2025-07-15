@@ -26,6 +26,26 @@ function MentorDashboard() {
 		localStorage.setItem("quizzes", JSON.stringify(newQuizzes));
 	};
 
+	// Update quiz state in localStorage (MVP ONLY)
+	// In production, replace with API/backend
+	const updateQuizState = (quizId, updates) => {
+		const updated = quizzes.map((q) =>
+			q.id === quizId ? { ...q, ...updates } : q,
+		);
+		setQuizzes(updated);
+		localStorage.setItem("quizzes", JSON.stringify(updated));
+	};
+
+	// Handle Run Quiz (open for join)
+	const handleRunQuiz = (quizId) => {
+		updateQuizState(quizId, { isRunning: true, isStarted: false });
+	};
+
+	// Handle Start Quiz (show questions)
+	const handleStartQuiz = (quizId) => {
+		updateQuizState(quizId, { isStarted: true });
+	};
+
 	// Handle form submit for creating a new quiz
 	const handleCreateQuiz = (e) => {
 		e.preventDefault();
@@ -117,7 +137,33 @@ function MentorDashboard() {
 								<div className="text-sm text-gray-500 mb-2">
 									Duration: {quiz.duration / 60} min
 								</div>
-								{/* Edit button (no action yet) */}
+								{/* Quiz status and actions (MVP ONLY) */}
+								<div className="mb-2">
+									{quiz.isStarted ? (
+										<span className="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold">
+											Started
+										</span>
+									) : quiz.isRunning ? (
+										<>
+											<span className="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-semibold mr-2">
+												Open for Join
+											</span>
+											<button
+												className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm mr-2"
+												onClick={() => handleStartQuiz(quiz.id)}
+											>
+												Start Quiz
+											</button>
+										</>
+									) : (
+										<button
+											className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm mr-2"
+											onClick={() => handleRunQuiz(quiz.id)}
+										>
+											Run Quiz
+										</button>
+									)}
+								</div>
 								<button
 									className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
 									onClick={() => navigate(`/mentor/quiz/${quiz.id}/edit`)}

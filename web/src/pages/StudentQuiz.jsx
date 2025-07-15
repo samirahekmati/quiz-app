@@ -10,8 +10,6 @@ const loadQuizzes = () => {
 function StudentQuiz() {
 	const { quizId } = useParams();
 	const navigate = useNavigate();
-	// State for quiz started (simulate mentor start)
-	const [quizStarted, setQuizStarted] = useState(false);
 	// State for current question index
 	const [current, setCurrent] = useState(0);
 	// State for answers: { [questionId]: answer or array of answers }
@@ -70,8 +68,8 @@ function StudentQuiz() {
 		}
 	};
 
-	// If quiz not started, show waiting message and simulate button
-	if (!quizStarted) {
+	// If quiz is not started, show waiting message (MVP ONLY)
+	if (!quiz.isStarted) {
 		return (
 			<div className="p-4 max-w-md mx-auto text-center">
 				<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
@@ -81,13 +79,6 @@ function StudentQuiz() {
 						🚦
 					</span>
 				</div>
-				{/* MVP only: Simulate mentor start button. Remove in production! */}
-				<button
-					className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-					onClick={() => setQuizStarted(true)}
-				>
-					Simulate Mentor Start
-				</button>
 			</div>
 		);
 	}

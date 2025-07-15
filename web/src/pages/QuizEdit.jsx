@@ -189,7 +189,18 @@ function QuizEdit() {
 				i === quizIndex ? updatedQuiz : q,
 			);
 		} else {
-			updatedQuizzes = [...quizzes, updatedQuiz];
+			// When creating a new quiz, add isRunning and isStarted fields (MVP ONLY)
+			const newQuiz = {
+				id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1,
+				user_id: currentMentorId,
+				title: "New Quiz", // Placeholder, will be updated
+				description: "Description for new quiz", // Placeholder, will be updated
+				duration: 30 * 60, // Placeholder, will be updated
+				questions: [],
+				isRunning: false, // MVP ONLY: In production, backend should set this
+				isStarted: false, // MVP ONLY: In production, backend should set this
+			};
+			updatedQuizzes = [...quizzes, newQuiz];
 		}
 		setQuizzes(updatedQuizzes);
 		localStorage.setItem("quizzes", JSON.stringify(updatedQuizzes));

@@ -20,10 +20,15 @@ function StudentJoin() {
 		e.preventDefault();
 		setError("");
 		const id = Number(quizId);
-		// Check quiz ID exists
-		const quizExists = quizzes.some((q) => q.id === id);
-		if (!quizExists) {
+		const quiz = quizzes.find((q) => q.id === id);
+		if (!quiz) {
 			setError("Quiz ID is invalid.");
+			return;
+		}
+		if (!quiz.isRunning) {
+			setError(
+				"Quiz is not open for join yet. Please wait for the mentor to run the quiz.",
+			);
 			return;
 		}
 		// Check username is unique for this quiz
@@ -38,7 +43,7 @@ function StudentJoin() {
 			[id]: [...quizStudents, username.trim().toLowerCase()],
 		});
 		// Redirect to waiting page (placeholder)
-		navigate(`/student/quiz/${id}/wait`);
+		navigate(`/student/quiz/${id}`);
 	};
 
 	return (
