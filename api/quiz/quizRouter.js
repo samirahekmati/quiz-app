@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { createQuiz, getQuizById } from "./quizController.js";
+import { createQuiz, getQuizById, deleteQuiz } from "./quizController.js";
 import questionRouter from "../questions/questionRouter.js"
 
 const quizRouter = Router();
@@ -10,5 +10,6 @@ quizRouter.post("/", createQuiz); // api/quizzes
 quizRouter.get("/:quizId", getQuizById) // Get api/quizzes/:quizId
 // Mount questionRouter to handle all question-related routes for a specific quiz
 quizRouter.use("/:quizId/questions", questionRouter)
+quizRouter.delete("/:quizId", deleteQuiz); //DELETE /api/quizzes/:quizId
 
 export default quizRouter;
