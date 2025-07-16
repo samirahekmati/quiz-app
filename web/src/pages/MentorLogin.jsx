@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
+import getApiBaseUrl from "../services/apiBaseUrl";
+
 function MentorLogin() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
@@ -25,7 +27,7 @@ function MentorLogin() {
 		}
 		setLoading(true);
 		try {
-			const res = await fetch("/api/auth/login", {
+			const res = await fetch(`${getApiBaseUrl()}/auth/login`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
