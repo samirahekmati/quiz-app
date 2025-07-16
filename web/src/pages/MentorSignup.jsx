@@ -1,25 +1,19 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Helper to load mentors from localStorage
-const loadMentors = () => {
-	const saved = localStorage.getItem("mentors");
-	return saved ? JSON.parse(saved) : [];
-};
-
 function MentorSignup() {
 	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
-	const [mentors, setMentors] = useState(loadMentors());
+	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
 	// Simple email format check
 	const isValidEmail = (email) => /.+@.+\..+/.test(email);
 
 	// Handle form submit
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError("");
 		if (!username.trim() || !email.trim() || !password.trim()) {
@@ -30,26 +24,34 @@ function MentorSignup() {
 			setError("Invalid email format.");
 			return;
 		}
-		if (
-			mentors.some((m) => m.email.toLowerCase() === email.trim().toLowerCase())
-		) {
-			setError("Email already exists.");
-			return;
+		setLoading(true);
+		try {
+			const res = await fetch("/api/auth/register", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					email: email.trim().toLowerCase(),
+					username: username.trim(),
+					password,
+				}),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.error || "Registration failed.");
+				setLoading(false);
+				return;
+			}
+			// Save token and user info (MVP: localStorage)
+			localStorage.setItem("token", data.token);
+			localStorage.setItem("currentMentorId", data.user.id);
+			localStorage.setItem("mentorEmail", data.user.email);
+			localStorage.setItem("mentorUsername", data.user.username);
+			navigate("/mentor/dashboard");
+		} catch {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
 		}
-		const newId = mentors.length
-			? Math.max(...mentors.map((m) => m.id)) + 1
-			: 1;
-		const newMentor = {
-			id: newId,
-			username: username.trim(),
-			email: email.trim().toLowerCase(),
-			password,
-		};
-		const updated = [...mentors, newMentor];
-		setMentors(updated);
-		localStorage.setItem("mentors", JSON.stringify(updated));
-		localStorage.setItem("currentMentorId", newMentor.id);
-		navigate("/mentor/dashboard");
 	};
 
 	return (
@@ -98,10 +100,18 @@ function MentorSignup() {
 				<button
 					type="submit"
 					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					disabled={loading}
 				>
-					Sign Up
+					{loading ? "Signing up..." : "Sign Up"}
 				</button>
 			</form>
+			<button
+				className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+				type="button"
+				onClick={() => navigate("/")}
+			>
+				Back to Home
+			</button>
 		</div>
 	);
 }

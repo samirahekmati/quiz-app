@@ -1,41 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
-// MVP ONLY: Load quizzes from localStorage or use empty array
-// In production, fetch from backend/database
-const loadQuizzes = () => {
-	const saved = localStorage.getItem("quizzes");
-	return saved ? JSON.parse(saved) : [];
-};
+import getApiBaseUrl from "../services/apiBaseUrl";
 
 function QuizEdit() {
 	const { quizId } = useParams();
 	const navigate = useNavigate();
-	const currentMentorId = Number(localStorage.getItem("currentMentorId"));
-	// Load quizzes (MVP ONLY)
-	const [quizzes, setQuizzes] = useState(loadQuizzes());
-	// Find current quiz (MVP ONLY)
-	const quizIndex = quizzes.findIndex((q) => q.id === Number(quizId));
-	// Always preserve user_id
-	const quiz = quizzes[quizIndex] || {
-		id: Number(quizId),
-		user_id: currentMentorId,
-		questions: [],
-	};
-	// State for all questions (nested in quiz)
-	const [questions, setQuestions] = useState(quiz.questions || []);
-	// State for current question form
+
+	const [questions, setQuestions] = useState([]);
 	const [questionText, setQuestionText] = useState("");
 	const [questionType, setQuestionType] = useState("multiple-choice");
-	const [correctAnswer, setCorrectAnswer] = useState(""); // for text type
-	// State for options (for multiple-choice): array of { text, is_correct }
+	const [correctAnswer, setCorrectAnswer] = useState("");
 	const [optionFields, setOptionFields] = useState([
 		{ text: "", is_correct: false },
 		{ text: "", is_correct: false },
 	]);
-	// State for editing (MVP ONLY)
-	// In production, use backend PATCH/PUT for editing questions
 	const [editingQuestionId, setEditingQuestionId] = useState(null);
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
+
+	// Fetch quiz and questions from API
+	useEffect(() => {
+		async function fetchQuiz() {
+			setLoading(true);
+			setError("");
+			try {
+				const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}`);
+				const data = await res.json();
+				if (!res.ok) {
+					setError(data.message || "Failed to load quiz.");
+					setQuestions([]);
+				} else {
+					setQuestions(data.questions || []);
+				}
+			} catch {
+				setError("Network error. Please try again.");
+				setQuestions([]);
+			} finally {
+				setLoading(false);
+			}
+		}
+		if (quizId) fetchQuiz();
+	}, [quizId]);
 
 	// Handle change for each option field
 	const handleOptionChange = (idx, field, value) => {
@@ -64,86 +70,80 @@ function QuizEdit() {
 		]);
 	};
 
-	// Add or update question in questions list
-	const handleAddQuestion = (e) => {
+	// TODO: Add and update question via API
+	const handleAddQuestion = async (e) => {
 		e.preventDefault();
-		if (!questionText.trim()) return;
-		if (questionType === "text" && !correctAnswer.trim()) return;
+		setError("");
+		if (!questionText.trim()) {
+			setError("Question text is required.");
+			return;
+		}
 		if (questionType === "multiple-choice") {
 			const validOptions = optionFields.filter((opt) => opt.text.trim());
-			if (
-				validOptions.length < 2 ||
-				!validOptions.some((opt) => opt.is_correct)
-			)
+			if (validOptions.length < 2) {
+				setError("At least two options are required.");
 				return;
-			// Assign unique ids to options
-			const questionId =
-				editingQuestionId ||
-				(questions.length ? Math.max(...questions.map((q) => q.id)) + 1 : 1);
-			const optionsWithIds = validOptions.map((opt, idx) => ({
-				id: idx + 1,
-				question_id: Number(quizId), // MVP ONLY: In production, backend assigns ids
-				text: opt.text,
-				is_correct: opt.is_correct,
-			}));
-			const newQuestion = {
-				id: questionId,
-				quiz_id: Number(quizId),
-				text: questionText,
-				type: questionType,
-				options: optionsWithIds,
-			};
-			let updatedQuestions;
-			if (editingQuestionId) {
-				// MVP ONLY: Update question in-place by id
-				// In production, send PATCH/PUT to backend
-				updatedQuestions = questions.map((q) =>
-					q.id === editingQuestionId ? newQuestion : q,
-				);
-			} else {
-				updatedQuestions = [...questions, newQuestion];
 			}
-			setQuestions(updatedQuestions);
-			// Reset form
+			if (!validOptions.some((opt) => opt.is_correct)) {
+				setError("At least one correct option is required.");
+				return;
+			}
+		}
+		if (questionType === "text" && !correctAnswer.trim()) {
+			setError("Correct answer is required for text questions.");
+			return;
+		}
+		setLoading(true);
+		try {
+			const url = editingQuestionId
+				? `${getApiBaseUrl()}/quizzes/${quizId}/questions/${editingQuestionId}`
+				: `${getApiBaseUrl()}/quizzes/${quizId}/questions`;
+			const method = editingQuestionId ? "PUT" : "POST";
+			const body =
+				questionType === "multiple-choice"
+					? {
+							text: questionText.trim(),
+							type: "multiple_choice",
+							options: optionFields.map((opt) => ({
+								text: opt.text.trim(),
+								is_correct: !!opt.is_correct,
+							})),
+						}
+					: {
+							text: questionText.trim(),
+							type: "fill_in_blank",
+							options: [{ text: correctAnswer.trim(), is_correct: true }],
+						};
+			const res = await fetch(url, {
+				method,
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify(body),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.message || "Failed to save question.");
+				setLoading(false);
+				return;
+			}
+			// Success: refresh questions from API
 			setQuestionText("");
 			setQuestionType("multiple-choice");
 			setCorrectAnswer("");
 			resetOptionFields();
 			setEditingQuestionId(null);
-		} else {
-			// For text type
-			const questionId =
-				editingQuestionId ||
-				(questions.length ? Math.max(...questions.map((q) => q.id)) + 1 : 1);
-			const newQuestion = {
-				id: questionId,
-				quiz_id: Number(quizId),
-				text: questionText,
-				type: questionType,
-				correct_answer: correctAnswer,
-				options: [],
-			};
-			let updatedQuestions;
-			if (editingQuestionId) {
-				// MVP ONLY: Update question in-place by id
-				// In production, send PATCH/PUT to backend
-				updatedQuestions = questions.map((q) =>
-					q.id === editingQuestionId ? newQuestion : q,
-				);
-			} else {
-				updatedQuestions = [...questions, newQuestion];
+			// Fetch updated questions
+			const quizRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}`);
+			const quizData = await quizRes.json();
+			if (quizRes.ok) {
+				setQuestions(quizData.questions || []);
 			}
-			setQuestions(updatedQuestions);
-			// Reset form
-			setQuestionText("");
-			setQuestionType("multiple-choice");
-			setCorrectAnswer("");
-			resetOptionFields();
-			setEditingQuestionId(null);
+		} catch {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
 		}
 	};
 
-	// Edit question (load to form, do not remove from list)
 	const handleEditQuestion = (q) => {
 		setQuestionText(q.text);
 		setQuestionType(q.type);
@@ -166,7 +166,6 @@ function QuizEdit() {
 		setEditingQuestionId(q.id);
 	};
 
-	// Cancel editing
 	const handleCancelEdit = () => {
 		setQuestionText("");
 		setQuestionType("multiple-choice");
@@ -175,42 +174,18 @@ function QuizEdit() {
 		setEditingQuestionId(null);
 	};
 
-	// Finish quiz: save quiz with questions/options to localStorage (MVP ONLY)
-	// In production, send to backend/database
+	// TODO: Finish quiz logic (redirect to dashboard)
 	const handleFinishQuiz = () => {
-		const updatedQuiz = {
-			...quiz,
-			user_id: quiz.user_id || currentMentorId,
-			questions,
-		};
-		let updatedQuizzes;
-		if (quizIndex !== -1) {
-			updatedQuizzes = quizzes.map((q, i) =>
-				i === quizIndex ? updatedQuiz : q,
-			);
-		} else {
-			// When creating a new quiz, add isRunning and isStarted fields (MVP ONLY)
-			const newQuiz = {
-				id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1,
-				user_id: currentMentorId,
-				title: "New Quiz", // Placeholder, will be updated
-				description: "Description for new quiz", // Placeholder, will be updated
-				duration: 30 * 60, // Placeholder, will be updated
-				questions: [],
-				isRunning: false, // MVP ONLY: In production, backend should set this
-				isStarted: false, // MVP ONLY: In production, backend should set this
-			};
-			updatedQuizzes = [...quizzes, newQuiz];
-		}
-		setQuizzes(updatedQuizzes);
-		localStorage.setItem("quizzes", JSON.stringify(updatedQuizzes));
-		// Redirect to dashboard
 		navigate("/mentor/dashboard");
 	};
 
 	return (
 		<div className="p-4 max-w-2xl mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Edit Quiz</h1>
+			{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+			{loading && (
+				<div className="text-gray-500 text-sm mb-2">Loading quiz...</div>
+			)}
 			{/* Add Question Form */}
 			<form
 				onSubmit={handleAddQuestion}
@@ -316,41 +291,68 @@ function QuizEdit() {
 					)}
 				</div>
 			</form>
-			{/* List of questions */}
-			<div>
-				<div className="font-semibold mb-2">Questions</div>
+			{/* Render questions list from API */}
+			<div className="border p-4 rounded bg-gray-50 text-gray-600 text-center">
 				{questions.length === 0 ? (
-					<p>No questions yet.</p>
+					<p className="mb-2 font-semibold">No questions yet.</p>
 				) : (
-					<ul className="space-y-3">
-						{questions.map((q, idx) => (
-							<li
-								key={q.id}
-								className="border p-3 rounded flex justify-between items-center"
-							>
-								<div>
-									<span className="font-bold mr-2">Q{idx + 1}:</span>
-									<span>{q.text}</span>
-									<span className="ml-2 text-xs text-gray-500">[{q.type}]</span>
-								</div>
-								<button
-									className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-									onClick={() => handleEditQuestion(q)}
+					<>
+						<div className="font-semibold mb-2">Questions</div>
+						<ul className="space-y-3">
+							{questions.map((q, idx) => (
+								<li
+									key={q.id}
+									className="border p-3 rounded flex justify-between items-center"
 								>
-									Edit
-								</button>
-							</li>
-						))}
-					</ul>
+									<div>
+										<span className="font-bold mr-2">Q{idx + 1}:</span>
+										<span>{q.text}</span>
+										<span className="ml-2 text-xs text-gray-500">
+											[{q.type}]
+										</span>
+									</div>
+									<div className="flex gap-2">
+										<button
+											type="button"
+											className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+											onClick={() => handleEditQuestion(q)}
+										>
+											Edit
+										</button>
+										<button
+											type="button"
+											className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+											onClick={() => {
+												// TODO: Call API to delete question by q.id
+												//
+												// fetch(`${getApiBaseUrl()}/quizzes/${quizId}/questions/${q.id}`, { method: 'DELETE' })
+												//   .then(() => setQuestions(questions.filter(qq => qq.id !== q.id)));
+											}}
+										>
+											Delete
+										</button>
+									</div>
+								</li>
+							))}
+						</ul>
+					</>
 				)}
 			</div>
-			{/* Finish Quiz button */}
-			<button
-				className="mt-6 px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition"
-				onClick={handleFinishQuiz}
-			>
-				Finish
-			</button>
+			<div className="flex gap-2 mt-6">
+				<button
+					onClick={handleFinishQuiz}
+					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+				>
+					Finish
+				</button>
+				<button
+					onClick={() => navigate("/mentor/dashboard")}
+					className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+					type="button"
+				>
+					Back
+				</button>
+			</div>
 		</div>
 	);
 }

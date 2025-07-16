@@ -1,5 +1,6 @@
 import { Route, Routes } from "react-router";
 
+import ProtectedRoute from "./components/ProtectedRoute.jsx";
 import "./App.css";
 import About from "./pages/About.jsx";
 import Home from "./pages/Home.jsx";
@@ -18,8 +19,22 @@ function App() {
 			<Route path="/" element={<Home />} />
 			<Route path="/nested/about/path" element={<About />} />
 			{/* Mentor routes */}
-			<Route path="/mentor/dashboard" element={<MentorDashboard />} />
-			<Route path="/mentor/quiz/:quizId/edit" element={<QuizEdit />} />
+			<Route
+				path="/mentor/dashboard"
+				element={
+					<ProtectedRoute>
+						<MentorDashboard />
+					</ProtectedRoute>
+				}
+			/>
+			<Route
+				path="/mentor/quiz/:quizId/edit"
+				element={
+					<ProtectedRoute>
+						<QuizEdit />
+					</ProtectedRoute>
+				}
+			/>
 			<Route path="/mentor/signup" element={<MentorSignup />} />
 			<Route path="/mentor/login" element={<MentorLogin />} />
 			{/* Student routes */}

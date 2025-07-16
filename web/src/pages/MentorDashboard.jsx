@@ -1,80 +1,85 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 
-// Helper to load quizzes from localStorage
-const loadQuizzes = () => {
-	const saved = localStorage.getItem("quizzes");
-	return saved ? JSON.parse(saved) : [];
-};
+import getApiBaseUrl from "../services/apiBaseUrl";
 
 function MentorDashboard() {
-	// Get current mentor ID from localStorage (MVP ONLY)
-	// In production, get from session/auth backend
-	const currentMentorId = Number(localStorage.getItem("currentMentorId"));
-	const [quizzes, setQuizzes] = useState(loadQuizzes());
+	const navigate = useNavigate();
+
+	// Session check: if not logged in, redirect to login
+	useEffect(() => {
+		const token = localStorage.getItem("token");
+		const mentorId = localStorage.getItem("currentMentorId");
+		if (!token || !mentorId) {
+			navigate("/mentor/login");
+		}
+	}, [navigate]);
+
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [duration, setDuration] = useState(""); // in minutes
-	const navigate = useNavigate();
+	const [error, setError] = useState("");
+	const [loading, setLoading] = useState(false);
 
-	// Only quizzes for this mentor
-	const myQuizzes = quizzes.filter((q) => q.user_id === currentMentorId);
+	// TODO: Replace with GET /api/quizzes When API is available
 
-	// Save quizzes to localStorage whenever they change
-	const saveQuizzes = (newQuizzes) => {
-		setQuizzes(newQuizzes);
-		localStorage.setItem("quizzes", JSON.stringify(newQuizzes));
-	};
+	// const [quizzes, setQuizzes] = useState([]);
+	// useEffect(() => {
+	//   // fetch quizzes from API when endpoint is ready
+	// }, []);
 
-	// Update quiz state in localStorage (MVP ONLY)
-	// In production, replace with API/backend
-	const updateQuizState = (quizId, updates) => {
-		const updated = quizzes.map((q) =>
-			q.id === quizId ? { ...q, ...updates } : q,
-		);
-		setQuizzes(updated);
-		localStorage.setItem("quizzes", JSON.stringify(updated));
-	};
-
-	// Handle Run Quiz (open for join)
-	const handleRunQuiz = (quizId) => {
-		updateQuizState(quizId, { isRunning: true, isStarted: false });
-	};
-
-	// Handle Start Quiz (show questions)
-	const handleStartQuiz = (quizId) => {
-		updateQuizState(quizId, { isStarted: true });
-	};
-
-	// Handle form submit for creating a new quiz
-	const handleCreateQuiz = (e) => {
+	const handleCreateQuiz = async (e) => {
 		e.preventDefault();
-		if (!title.trim() || !duration) return;
-		const newQuiz = {
-			id: quizzes.length ? Math.max(...quizzes.map((q) => q.id)) + 1 : 1,
-			user_id: currentMentorId,
-			title,
-			description,
-			duration: Number(duration) * 60,
-			questions: [], // always add empty questions array for new quiz
-		};
-		const updated = [...quizzes, newQuiz];
-		saveQuizzes(updated);
-		navigate(`/mentor/quiz/${newQuiz.id}/edit`);
+		setError("");
+		if (!title.trim() || !duration) {
+			setError("Title and duration are required.");
+			return;
+		}
+		setLoading(true);
+		try {
+			const res = await fetch(`${getApiBaseUrl()}/quizzes`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({
+					title: title.trim(),
+					description: description.trim(),
+					duration: Number(duration) * 60,
+				}),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.message || "Failed to create quiz.");
+				setLoading(false);
+				return;
+			}
+			// Success: redirect to edit page for new quiz
+			navigate(`/mentor/quiz/${data.quiz.id}/edit`);
+		} catch {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
+		}
 	};
 
-	// If not logged in, show message (MVP ONLY)
-	if (!currentMentorId) {
-		return (
-			<div className="p-4 text-center text-red-600">
-				You must be logged in as a mentor to view your dashboard.
-			</div>
-		);
-	}
+	const handleLogout = () => {
+		localStorage.removeItem("token");
+		localStorage.removeItem("currentMentorId");
+		localStorage.removeItem("mentorEmail");
+		localStorage.removeItem("mentorUsername");
+		navigate("/mentor/login");
+	};
 
 	return (
 		<div className="p-4 max-w-2xl mx-auto">
-			<h1 className="text-2xl font-bold mb-4">Mentor Dashboard</h1>
+			<div className="flex justify-between items-center mb-4">
+				<h1 className="text-2xl font-bold">Mentor Dashboard</h1>
+				<button
+					className="px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+					onClick={handleLogout}
+				>
+					Logout
+				</button>
+			</div>
 			{/* Create New Quiz Form */}
 			<form
 				onSubmit={handleCreateQuiz}
@@ -117,63 +122,47 @@ function MentorDashboard() {
 						required
 					/>
 				</div>
+				{error && <div className="text-red-600 text-sm">{error}</div>}
 				<button
 					type="submit"
 					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					disabled={loading}
 				>
-					Create New Quiz
+					{loading ? "Creating..." : "Create New Quiz"}
 				</button>
 			</form>
-			{/* List of quizzes for current mentor */}
-			<div>
-				{myQuizzes.length === 0 ? (
-					<p>No quizzes yet.</p>
-				) : (
-					<ul className="space-y-4">
-						{myQuizzes.map((quiz) => (
-							<li key={quiz.id} className="border p-4 rounded shadow-sm">
-								<div className="font-semibold text-lg">{quiz.title}</div>
-								<div className="text-gray-600 mb-2">{quiz.description}</div>
-								<div className="text-sm text-gray-500 mb-2">
-									Duration: {quiz.duration / 60} min
-								</div>
-								{/* Quiz status and actions (MVP ONLY) */}
-								<div className="mb-2">
-									{quiz.isStarted ? (
-										<span className="px-2 py-1 bg-green-200 text-green-800 rounded text-xs font-semibold">
-											Started
-										</span>
-									) : quiz.isRunning ? (
-										<>
-											<span className="px-2 py-1 bg-yellow-200 text-yellow-800 rounded text-xs font-semibold mr-2">
-												Open for Join
-											</span>
-											<button
-												className="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm mr-2"
-												onClick={() => handleStartQuiz(quiz.id)}
-											>
-												Start Quiz
-											</button>
-										</>
-									) : (
-										<button
-											className="px-3 py-1 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm mr-2"
-											onClick={() => handleRunQuiz(quiz.id)}
-										>
-											Run Quiz
-										</button>
-									)}
-								</div>
-								<button
-									className="px-3 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
-									onClick={() => navigate(`/mentor/quiz/${quiz.id}/edit`)}
-								>
-									Edit
-								</button>
-							</li>
-						))}
-					</ul>
-				)}
+			{/* TODO: Quiz list will be rendered when API endpoint is available. */}
+			{/* When the backend provides endpoint, fetch and display quizzes. */}
+			{/* quiz list with Delete button (replace with real data/API): */}
+			{/*
+			<ul className="space-y-2 mt-6">
+			  {quizzes.map((quiz) => (
+			    <li key={quiz.id} className="flex justify-between items-center border p-2 rounded">
+			      <span>{quiz.title} (ID: {quiz.id})</span>
+			      <button
+			        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+			        onClick={() => {
+			          // TODO: Call API to delete quiz by quiz.id
+			          // 
+			          // fetch(`${getApiBaseUrl()}/quizzes/${quiz.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
+			          //   .then(() => setQuizzes(quizzes.filter(q => q.id !== quiz.id)));
+			        }}
+			      >
+			        Delete
+			      </button>
+			    </li>
+			  ))}
+			</ul>
+			*/}
+			<div className="border p-4 rounded bg-gray-50 text-gray-600 text-center">
+				<p className="mb-2 font-semibold">Quiz list will appear here.</p>
+				<p className="text-xs">
+					All quiz operations in this project are based on{" "}
+					<span className="font-mono bg-gray-200 px-1 rounded">quizId</span>.
+					When the backend provides a list endpoint, this section will fetch and
+					display quizzes by{" "}
+					<span className="font-mono bg-gray-200 px-1 rounded">quizId</span>.
+				</p>
 			</div>
 		</div>
 	);

@@ -1,55 +1,75 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
-// Helper to load quizzes from localStorage
-const loadQuizzes = () => {
-	const saved = localStorage.getItem("quizzes");
-	return saved ? JSON.parse(saved) : [];
-};
+import getApiBaseUrl from "../services/apiBaseUrl";
 
 function StudentQuiz() {
 	const { quizId } = useParams();
 	const navigate = useNavigate();
-	// State for current question index
+	const [quiz, setQuiz] = useState(null);
+	const [loading, setLoading] = useState(true);
+	const [error, setError] = useState("");
 	const [current, setCurrent] = useState(0);
-	// State for answers: { [questionId]: answer or array of answers }
 	const [answers, setAnswers] = useState({});
-	// State for text answer
 	const [textAnswer, setTextAnswer] = useState("");
-	// State for selected options (array for multiple correct)
 	const [selectedOptions, setSelectedOptions] = useState([]);
 
-	// Load quiz from localStorage
-	const quizzes = loadQuizzes();
-	const quiz = quizzes.find((q) => q.id === Number(quizId));
-	if (!quiz) {
-		return (
-			<div className="p-4 text-center text-red-600">
-				Quiz not found or invalid Quiz ID.
-			</div>
-		);
+	useEffect(() => {
+		async function fetchQuiz() {
+			setLoading(true);
+			setError("");
+			try {
+				const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}`);
+				const data = await res.json();
+				if (!res.ok) {
+					setError(data.message || "Quiz not found or invalid Quiz ID.");
+					setQuiz(null);
+				} else {
+					setQuiz(data);
+				}
+			} catch {
+				setError("Network error. Please try again.");
+				setQuiz(null);
+			} finally {
+				setLoading(false);
+			}
+		}
+		if (quizId) fetchQuiz();
+	}, [quizId]);
+
+	if (loading) {
+		return <div className="p-4 text-center">Loading quiz...</div>;
 	}
+	if (error) {
+		return <div className="p-4 text-center text-red-600">{error}</div>;
+	}
+	if (!quiz) {
+		return <div className="p-4 text-center text-red-600">Quiz not found.</div>;
+	}
+
 	const questions = quiz.questions || [];
 	const question = questions[current];
-	// Detect if multiple correct answers
+	if (!question) {
+		return <div className="p-4 text-center">No questions in this quiz.</div>;
+	}
 	const isMultiple =
-		question.type === "multiple-choice" &&
+		question.type === "multiple_choice" &&
 		question.options.filter((o) => o.is_correct).length > 1;
 
-	// Handle answer submit (Next)
+	// TODO: Replace with API call to submit answer when backend endpoint is available
 	const handleNext = (e) => {
 		e.preventDefault();
 		let newAnswers = { ...answers };
-		if (question.type === "multiple-choice") {
+		if (question.type === "multiple_choice") {
 			if (isMultiple) {
-				if (selectedOptions.length === 0) return; // must select at least one
+				if (selectedOptions.length === 0) return;
 				newAnswers[question.id] = selectedOptions;
 			} else {
-				if (selectedOptions.length !== 1) return; // must select one
+				if (selectedOptions.length !== 1) return;
 				newAnswers[question.id] = selectedOptions[0];
 			}
 		} else {
-			if (!textAnswer.trim()) return; // must enter
+			if (!textAnswer.trim()) return;
 			newAnswers[question.id] = textAnswer.trim();
 		}
 		setAnswers(newAnswers);
@@ -58,17 +78,23 @@ function StudentQuiz() {
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
-			// MVP ONLY: Save answers to localStorage for StudentResult.jsx
-			// In production, this will be replaced by API/database call
-			localStorage.setItem(
-				`quiz_answers_${quiz.id}`,
-				JSON.stringify({ quizId: quiz.id, answers: newAnswers }),
-			);
+			// TODO: POST /api/quizzes/:quizId/answers with { studentId, answers } when backend endpoint is available
+			//
+			// const studentId = localStorage.getItem("studentId");
+			// const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/answers`, {
+			//   method: "POST",
+			//   headers: { "Content-Type": "application/json" },
+			//   body: JSON.stringify({ studentId, answers: newAnswers }),
+			// });
+			// if (res.ok) {
+			//   navigate(`/student/result/${quizId}`);
+			// } else {
+			//   // handle error
+			// }
 			navigate(`/student/result/${quiz.id}`);
 		}
 	};
 
-	// If quiz is not started, show waiting message (MVP ONLY)
 	if (!quiz.isStarted) {
 		return (
 			<div className="p-4 max-w-md mx-auto text-center">
@@ -76,14 +102,13 @@ function StudentQuiz() {
 				<div className="text-lg mb-2">
 					Waiting for the mentor to start the quiz. Please stay on this page...{" "}
 					<span role="img" aria-label="traffic light">
-						🚦
+						6a6
 					</span>
 				</div>
 			</div>
 		);
 	}
 
-	// Quiz started: show current question
 	return (
 		<div className="p-4 max-w-md mx-auto">
 			<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
@@ -93,7 +118,7 @@ function StudentQuiz() {
 						Question {current + 1} of {questions.length}
 					</div>
 					<div className="mb-2">{question.text}</div>
-					{question.type === "multiple-choice" ? (
+					{question.type === "multiple_choice" ? (
 						<div className="space-y-2">
 							{isMultiple
 								? question.options.map((opt) => (

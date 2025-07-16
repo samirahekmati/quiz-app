@@ -1,49 +1,47 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Helper to load quizzes from localStorage
-const loadQuizzes = () => {
-	const saved = localStorage.getItem("quizzes");
-	return saved ? JSON.parse(saved) : [];
-};
+import getApiBaseUrl from "../services/apiBaseUrl";
 
 function StudentJoin() {
 	const [username, setUsername] = useState("");
 	const [quizId, setQuizId] = useState("");
 	const [error, setError] = useState("");
-	const [students, setStudents] = useState({}); // Initialize as empty object
-	const [quizzes] = useState(loadQuizzes());
+	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
-	// Handle form submit
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError("");
-		const id = Number(quizId);
-		const quiz = quizzes.find((q) => q.id === id);
-		if (!quiz) {
-			setError("Quiz ID is invalid.");
-			return;
+		setLoading(true);
+		try {
+			// Check quiz existence via API
+			const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}`);
+			if (!res.ok) {
+				setError("Quiz ID is invalid or quiz not found.");
+				setLoading(false);
+				return;
+			}
+			// TODO: POST /api/quizzes/:quizId/join with { username } and save studentId for later use
+			//
+			// const joinRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/join`, {
+			//   method: "POST",
+			//   headers: { "Content-Type": "application/json" },
+			//   body: JSON.stringify({ username }),
+			// });
+			// const joinData = await joinRes.json();
+			// if (joinRes.ok) {
+			//   localStorage.setItem("studentId", joinData.studentId);
+			//   navigate(`/student/quiz/${quizId}`);
+			// } else {
+			//   setError(joinData.message || "Failed to join quiz.");
+			// }
+			navigate(`/student/quiz/${quizId}`);
+		} catch {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
 		}
-		if (!quiz.isRunning) {
-			setError(
-				"Quiz is not open for join yet. Please wait for the mentor to run the quiz.",
-			);
-			return;
-		}
-		// Check username is unique for this quiz
-		const quizStudents = students[id] || [];
-		if (quizStudents.includes(username.trim().toLowerCase())) {
-			setError("Username is already taken for this quiz.");
-			return;
-		}
-		// Add student to mock state (for MVP only)
-		setStudents({
-			...students,
-			[id]: [...quizStudents, username.trim().toLowerCase()],
-		});
-		// Redirect to waiting page (placeholder)
-		navigate(`/student/quiz/${id}`);
 	};
 
 	return (
@@ -79,10 +77,19 @@ function StudentJoin() {
 				<button
 					type="submit"
 					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					disabled={loading}
 				>
-					Join
+					{loading ? "Joining..." : "Join"}
 				</button>
 			</form>
+			<button
+				className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+				type="button"
+				onClick={() => navigate("/")}
+			>
+				Back to Home
+			</button>
+			{/* TODO: API integration for join quiz and username validation when backend endpoint is available */}
 		</div>
 	);
 }

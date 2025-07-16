@@ -1,24 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
 
-// Helper to load mentors from localStorage
-const loadMentors = () => {
-	const saved = localStorage.getItem("mentors");
-	return saved ? JSON.parse(saved) : [];
-};
-
 function MentorLogin() {
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
 	const [error, setError] = useState("");
-	const [mentors] = useState(loadMentors()); // read-only for login
+	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
 	// Simple email format check
 	const isValidEmail = (email) => /.+@.+\..+/.test(email);
 
 	// Handle form submit
-	const handleSubmit = (e) => {
+	const handleSubmit = async (e) => {
 		e.preventDefault();
 		setError("");
 		if (!email.trim() || !password.trim()) {
@@ -29,24 +23,30 @@ function MentorLogin() {
 			setError("Invalid email format.");
 			return;
 		}
-		// Check if email exists
-		const mentor = mentors.find(
-			(m) => m.email.toLowerCase() === email.trim().toLowerCase(),
-		);
-		if (!mentor) {
-			setError("No account found with this email.");
-			return;
+		setLoading(true);
+		try {
+			const res = await fetch("/api/auth/login", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+			});
+			const data = await res.json();
+			if (!res.ok) {
+				setError(data.message || "Login failed.");
+				setLoading(false);
+				return;
+			}
+			// Save token and user info (MVP: localStorage)
+			localStorage.setItem("token", data.token);
+			localStorage.setItem("currentMentorId", data.user.id);
+			localStorage.setItem("mentorEmail", data.user.email);
+			localStorage.setItem("mentorUsername", data.user.name || "");
+			navigate("/mentor/dashboard");
+		} catch {
+			setError("Network error. Please try again.");
+		} finally {
+			setLoading(false);
 		}
-		// Check password
-		if (mentor.password !== password) {
-			setError("Incorrect password.");
-			return;
-		}
-		// MVP ONLY: Save mentor id to localStorage for session
-		// In production, use session/auth backend
-		localStorage.setItem("currentMentorId", mentor.id);
-		// Login successful
-		navigate("/mentor/dashboard");
 	};
 
 	return (
@@ -83,10 +83,18 @@ function MentorLogin() {
 				<button
 					type="submit"
 					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					disabled={loading}
 				>
-					Login
+					{loading ? "Logging in..." : "Login"}
 				</button>
 			</form>
+			<button
+				className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+				type="button"
+				onClick={() => navigate("/")}
+			>
+				Back to Home
+			</button>
 		</div>
 	);
 }
