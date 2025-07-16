@@ -11,6 +11,7 @@
 		"migration:create": "node-pg-migrate create --template-file-name ./migrations/template.js"
 	},
 	"dependencies": {
+		"cookie-parser": "^1.4.7",
 		"dotenv": "^17.1.0",
 		"express": "^5.1.0",
 		"helmet": "^8.1.0",
