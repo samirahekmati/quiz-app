@@ -119,3 +119,39 @@ export async function getQuizById(req, res) {
 	  res.status(500).json({ message: "Server error while fetching quiz" });
 	}
   }
+
+  //Delete a quiz and its questions
+  export async function deleteQuiz(req, res) {
+	const { quizId } = req.params;
+  
+	try {
+	  // Delete options linked to questions of this quiz
+	  await db.query(
+		`DELETE FROM options 
+		 WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = $1)`,
+		[quizId]
+	  );
+  
+	  // Delete questions linked to this quiz
+	  await db.query(
+		"DELETE FROM questions WHERE quiz_id = $1",
+		[quizId]
+	  );
+  
+  
+	  // Delete the quiz
+	  const result = await db.query(
+		"DELETE FROM quizzes WHERE id = $1 RETURNING *",
+		[quizId]
+	  );
+  
+	  if (result.rowCount === 0) {
+		return res.status(404).json({ message: "Quiz not found" });
+	  }
+  
+	  res.status(200).json({ message: "Quiz deleted successfully", quiz: result.rows[0] });
+	} catch (error) {
+	  logger.error("Error deleting quiz:", error);
+	  res.status(500).json({ message: "Server error while deleting quiz" });
+	}
+  }
