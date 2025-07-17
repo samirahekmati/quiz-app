@@ -12,7 +12,7 @@
 	},
 	"dependencies": {
 		"cookie-parser": "^1.4.7",
-		"dotenv": "^17.1.0",
+		"dotenv": "^17.2.0",
 		"express": "^5.1.0",
 		"helmet": "^8.1.0",
 		"morgan": "^1.10.0",
@@ -22,7 +22,7 @@
 		"zod": "^4.0.5"
 	},
 	"devDependencies": {
-		"@testcontainers/postgresql": "^11.1.0",
+		"@testcontainers/postgresql": "^11.2.1",
 		"supertest": "^7.1.1"
 	}
 }
