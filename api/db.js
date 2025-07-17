@@ -30,3 +30,4 @@ function query(...args) {
 }
 
 export default { query };
+export { pool };
