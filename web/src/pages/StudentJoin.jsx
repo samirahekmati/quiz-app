@@ -22,21 +22,19 @@ function StudentJoin() {
 				setLoading(false);
 				return;
 			}
-			// TODO: POST /api/quizzes/:quizId/join with { username } and save studentId for later use
-			//
-			// const joinRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/join`, {
-			//   method: "POST",
-			//   headers: { "Content-Type": "application/json" },
-			//   body: JSON.stringify({ username }),
-			// });
-			// const joinData = await joinRes.json();
-			// if (joinRes.ok) {
-			//   localStorage.setItem("studentId", joinData.studentId);
-			//   navigate(`/student/quiz/${quizId}`);
-			// } else {
-			//   setError(joinData.message || "Failed to join quiz.");
-			// }
-			navigate(`/student/quiz/${quizId}`);
+			// Join quiz via API
+			const joinRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/join`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ username }),
+			});
+			const joinData = await joinRes.json();
+			if (joinRes.ok) {
+				localStorage.setItem("studentId", joinData.studentId);
+				navigate(`/student/quiz/${quizId}`);
+			} else {
+				setError(joinData.message || "Failed to join quiz.");
+			}
 		} catch {
 			setError("Network error. Please try again.");
 		} finally {
@@ -89,7 +87,6 @@ function StudentJoin() {
 			>
 				Back to Home
 			</button>
-			{/* TODO: API integration for join quiz and username validation when backend endpoint is available */}
 		</div>
 	);
 }

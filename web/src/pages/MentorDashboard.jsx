@@ -21,12 +21,19 @@ function MentorDashboard() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	// TODO: Replace with GET /api/quizzes When API is available
-
-	// const [quizzes, setQuizzes] = useState([]);
-	// useEffect(() => {
-	//   // fetch quizzes from API when endpoint is ready
-	// }, []);
+	const [quizzes, setQuizzes] = useState([]);
+	useEffect(() => {
+		const token = localStorage.getItem("token");
+		if (!token) return;
+		fetch(`${getApiBaseUrl()}/quizzes`, {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+			.then((res) => res.json())
+			.then((data) => {
+				if (Array.isArray(data)) setQuizzes(data);
+			})
+			.catch(() => {});
+	}, []);
 
 	const handleCreateQuiz = async (e) => {
 		e.preventDefault();
@@ -131,29 +138,34 @@ function MentorDashboard() {
 					{loading ? "Creating..." : "Create New Quiz"}
 				</button>
 			</form>
-			{/* TODO: Quiz list will be rendered when API endpoint is available. */}
-			{/* When the backend provides endpoint, fetch and display quizzes. */}
-			{/* quiz list with Delete button (replace with real data/API): */}
-			{/*
 			<ul className="space-y-2 mt-6">
-			  {quizzes.map((quiz) => (
-			    <li key={quiz.id} className="flex justify-between items-center border p-2 rounded">
-			      <span>{quiz.title} (ID: {quiz.id})</span>
-			      <button
-			        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-			        onClick={() => {
-			          // TODO: Call API to delete quiz by quiz.id
-			          // 
-			          // fetch(`${getApiBaseUrl()}/quizzes/${quiz.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
-			          //   .then(() => setQuizzes(quizzes.filter(q => q.id !== quiz.id)));
-			        }}
-			      >
-			        Delete
-			      </button>
-			    </li>
-			  ))}
+				{quizzes.map((quiz) => (
+					<li
+						key={quiz.id}
+						className="flex justify-between items-center border p-2 rounded"
+					>
+						<span>
+							{quiz.title} (ID: {quiz.id})
+						</span>
+						<button
+							className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
+							onClick={async () => {
+								const token = localStorage.getItem("token");
+								const res = await fetch(
+									`${getApiBaseUrl()}/quizzes/${quiz.id}`,
+									{
+										method: "DELETE",
+										headers: { Authorization: `Bearer ${token}` },
+									},
+								);
+								if (res.ok) setQuizzes(quizzes.filter((q) => q.id !== quiz.id));
+							}}
+						>
+							Delete
+						</button>
+					</li>
+				))}
 			</ul>
-			*/}
 			<div className="border p-4 rounded bg-gray-50 text-gray-600 text-center">
 				<p className="mb-2 font-semibold">Quiz list will appear here.</p>
 				<p className="text-xs">

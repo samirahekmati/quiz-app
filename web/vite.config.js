@@ -1,5 +1,6 @@
 import { resolve } from "node:path";
 
+import tailwindcss from "@tailwindcss/vite";
 import buildInfo from "@textbook/build-info/rollup-plugin";
 import react from "@vitejs/plugin-react-swc";
 import { configDotenv } from "dotenv";
@@ -38,7 +39,7 @@ export default defineConfig({
 		emptyOutDir: true,
 		outDir: "../api/static",
 	},
-	plugins: [buildInfo({ filename: "buildinfo.txt" }), react()],
+	plugins: [buildInfo({ filename: "buildinfo.txt" }), react(), tailwindcss()],
 	server: { port, proxy, strictPort: true },
 	test: {
 		environment: "jsdom",

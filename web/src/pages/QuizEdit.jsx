@@ -70,7 +70,6 @@ function QuizEdit() {
 		]);
 	};
 
-	// TODO: Add and update question via API
 	const handleAddQuestion = async (e) => {
 		e.preventDefault();
 		setError("");
@@ -174,7 +173,6 @@ function QuizEdit() {
 		setEditingQuestionId(null);
 	};
 
-	// TODO: Finish quiz logic (redirect to dashboard)
 	const handleFinishQuiz = () => {
 		navigate("/mentor/dashboard");
 	};
@@ -322,11 +320,17 @@ function QuizEdit() {
 										<button
 											type="button"
 											className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
-											onClick={() => {
-												// TODO: Call API to delete question by q.id
-												//
-												// fetch(`${getApiBaseUrl()}/quizzes/${quizId}/questions/${q.id}`, { method: 'DELETE' })
-												//   .then(() => setQuestions(questions.filter(qq => qq.id !== q.id)));
+											onClick={async () => {
+												const res = await fetch(
+													`${getApiBaseUrl()}/quizzes/${quizId}/questions/${q.id}`,
+													{
+														method: "DELETE",
+													},
+												);
+												if (res.ok)
+													setQuestions(
+														questions.filter((qq) => qq.id !== q.id),
+													);
 											}}
 										>
 											Delete

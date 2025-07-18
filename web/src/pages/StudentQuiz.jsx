@@ -56,7 +56,6 @@ function StudentQuiz() {
 		question.type === "multiple_choice" &&
 		question.options.filter((o) => o.is_correct).length > 1;
 
-	// TODO: Replace with API call to submit answer when backend endpoint is available
 	const handleNext = (e) => {
 		e.preventDefault();
 		let newAnswers = { ...answers };
@@ -78,19 +77,20 @@ function StudentQuiz() {
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
-			// TODO: POST /api/quizzes/:quizId/answers with { studentId, answers } when backend endpoint is available
-			//
-			// const studentId = localStorage.getItem("studentId");
-			// const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/answers`, {
-			//   method: "POST",
-			//   headers: { "Content-Type": "application/json" },
-			//   body: JSON.stringify({ studentId, answers: newAnswers }),
-			// });
-			// if (res.ok) {
-			//   navigate(`/student/result/${quizId}`);
-			// } else {
-			//   // handle error
-			// }
+			// Submit answers to backend
+			const studentId = localStorage.getItem("studentId");
+			fetch(`${getApiBaseUrl()}/quizzes/${quizId}/answers`, {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ studentId, answers: newAnswers }),
+			}).then((res) => {
+				if (res.ok) {
+					navigate(`/student/result/${quizId}`);
+				} else {
+					setError("Failed to submit answers. Please try again.");
+				}
+			});
+
 			navigate(`/student/result/${quiz.id}`);
 		}
 	};
