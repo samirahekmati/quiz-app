@@ -62,3 +62,21 @@ CREATE TABLE public."options" (
 	CONSTRAINT answers_pkey PRIMARY KEY (id),
 	CONSTRAINT answers_question_id_fkey FOREIGN KEY (question_id) REFERENCES public.questions(id) ON DELETE CASCADE
 );
+
+-- public.answers definition
+
+-- Drop table
+
+-- DROP TABLE public.answers;
+
+CREATE TABLE public.answers (
+	id serial4 NOT NULL,
+	username text NOT NULL,
+	quiz_id int4 NOT NULL,
+	question_id int4 NOT NULL,
+	selected_option text NOT NULL,
+	submitted_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	CONSTRAINT answers_pkey1 PRIMARY KEY (id),
+	CONSTRAINT answers_question_id_fkey1 FOREIGN KEY (question_id) REFERENCES public.questions(id) ON DELETE CASCADE,
+	CONSTRAINT answers_quiz_id_fkey FOREIGN KEY (quiz_id) REFERENCES public.quizzes(id) ON DELETE CASCADE
+);
