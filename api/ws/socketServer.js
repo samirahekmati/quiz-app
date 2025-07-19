@@ -35,5 +35,24 @@ export function setupSocketServer(io) {
 			// Broadcast to all other clients in the room that a new user joined
 			socket.to(quizId).emit("user-joined", { userId, role });
 		});
+
+		/**
+		 * Mentor starts the quiz for all users in the room
+		 * @param {Object} data - { quizId: string, startedAt: string (ISO), duration: number (seconds) }
+		 */
+		socket.on("quiz-started", (data) => {
+			const { quizId, startedAt, duration } = data;
+			if (!quizId || !startedAt || !duration) {
+				socket.emit("error", {
+					message: "quizId, startedAt, and duration are required to start quiz",
+				});
+				return;
+			}
+			// Broadcast to all clients in the room that the quiz has started
+			io.to(quizId).emit("quiz-started", { startedAt, duration });
+			logger.info(
+				`[socket.io] Quiz started in room: ${quizId} (startedAt: ${startedAt}, duration: ${duration}s)`,
+			);
+		});
 	});
 }
