@@ -36,10 +36,20 @@ function MentorDashboard() {
 			return;
 		}
 		setLoading(true);
+		const token = localStorage.getItem("token");
+		if (!token) {
+			setError("You must be logged in.");
+			setLoading(false);
+			return;
+		}
+		console.log("Using token:", token);
 		try {
 			const res = await fetch(`${getApiBaseUrl()}/quizzes`, {
 				method: "POST",
-				headers: { "Content-Type": "application/json" },
+				headers: {
+					"Content-Type": "application/json",
+					Authorization: `Bearer ${token}`,
+				},
 				body: JSON.stringify({
 					title: title.trim(),
 					description: description.trim(),
