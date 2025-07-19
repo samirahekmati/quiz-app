@@ -57,7 +57,7 @@ export function setupSocketServer(io) {
 
 		/**
 		 * Student submits an answer to a quiz question (real-time)
-		 * Logic is implemented here (not in answers/ or quiz/) to avoid conflicts forr now.
+		 * Logic is implemented here (not in answers/ or quiz/) to avoid conflicts for now.
 		 * This handler validates data and saves the answer directly to the DB.
 		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string }
 		 */
@@ -89,6 +89,25 @@ export function setupSocketServer(io) {
 				logger.error("[socket.io] Error saving answer:", err);
 				socket.emit("error", { message: "Failed to save answer" });
 			}
+		});
+
+		/**
+		 * Mentor ends the quiz for all users in the room (force end)
+		 * @param {Object} data - { quizId: string, endedAt: string (ISO) }
+		 */
+		socket.on("quiz-ended", (data) => {
+			const { quizId, endedAt } = data;
+			if (!quizId || !endedAt) {
+				socket.emit("error", {
+					message: "quizId and endedAt are required to end quiz",
+				});
+				return;
+			}
+			// Broadcast to all clients in the room that the quiz has ended
+			io.to(quizId).emit("quiz-ended", { endedAt });
+			logger.info(
+				`[socket.io] Quiz ended in room: ${quizId} (endedAt: ${endedAt})`,
+			);
 		});
 	});
 }
