@@ -54,5 +54,41 @@ export function setupSocketServer(io) {
 				`[socket.io] Quiz started in room: ${quizId} (startedAt: ${startedAt}, duration: ${duration}s)`,
 			);
 		});
+
+		/**
+		 * Student submits an answer to a quiz question (real-time)
+		 * Logic is implemented here (not in answers/ or quiz/) to avoid conflicts forr now.
+		 * This handler validates data and saves the answer directly to the DB.
+		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string }
+		 */
+		socket.on("submit-answer", async (data) => {
+			const { quizId, userId, questionId, answer } = data;
+			if (!quizId || !userId || !questionId || !answer) {
+				socket.emit("error", {
+					message:
+						"quizId, userId, questionId, and answer are required to submit answer",
+				});
+				return;
+			}
+			try {
+				// Direct DB access
+				const query = `
+          INSERT INTO answers (username, quiz_id, question_id, selected_option)
+          VALUES ($1, $2, $3, $4)
+          RETURNING *;
+        `;
+				const values = [userId, quizId, questionId, answer];
+				const { rows } = await import("../db.js").then((m) =>
+					m.default.query(query, values),
+				);
+				logger.info(
+					`[socket.io] Answer submitted by user ${userId} for quiz ${quizId}, question ${questionId}`,
+				);
+				socket.emit("answer-received", { success: true, answer: rows[0] });
+			} catch (err) {
+				logger.error("[socket.io] Error saving answer:", err);
+				socket.emit("error", { message: "Failed to save answer" });
+			}
+		});
 	});
 }
