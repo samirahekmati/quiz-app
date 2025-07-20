@@ -66,3 +66,19 @@ button:focus-visible {
 		background-color: #f9f9f9;
 	}
 }
+
+.btn-link {
+	color: white !important; /* override global a color */
+	background-color: #3b82f6; /* Tailwind bg-blue-600 */
+	padding: 0.75rem 1.5rem;
+	border-radius: 0.375rem;
+	font-weight: 600;
+	text-decoration: none;
+	display: inline-block;
+	transition: background-color 0.3s ease;
+}
+
+.btn-link:hover {
+	background-color: #2563eb; /* Tailwind bg-blue-700 */
+	color: white;
+}

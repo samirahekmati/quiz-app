@@ -11,17 +11,11 @@ function Home() {
 					Please select your role to continue:
 				</p>
 				<div className="flex flex-col gap-4">
-					<Link
-						to="/mentor/signup"
-						className="px-6 py-3 bg-blue-100 text-white rounded hover:bg-blue-200 transition text-lg font-semibold"
-					>
+					<Link to="/mentor/signup" className="btn-link">
 						Sign Up as a Mentor
 					</Link>
 					<br />
-					<Link
-						to="/mentor/login"
-						className="px-6 py-3 bg-blue-100 text-white rounded hover:bg-blue-200 transition text-lg font-semibold"
-					>
+					<Link to="/mentor/login" className="btn-link">
 						Log in as a Mentor
 					</Link>
 					<br />
