@@ -28,7 +28,7 @@ function MentorSignup() {
 		}
 		setLoading(true);
 		try {
-			const res = await fetch(`${getApiBaseUrl()}/auth/register"`, {
+			const res = await fetch(`${getApiBaseUrl()}/auth/register`, {
 				method: "POST",
 				headers: { "Content-Type": "application/json" },
 				body: JSON.stringify({
@@ -39,7 +39,7 @@ function MentorSignup() {
 			});
 			const data = await res.json();
 			if (!res.ok) {
-				setError(data.error || "Registration failed.");
+				setError(data.message || "Registration failed.");
 				setLoading(false);
 				return;
 			}
