@@ -21,12 +21,49 @@ function MentorDashboard() {
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
-	// TODO: Replace with GET /api/quizzes When API is available
+	// New state to hold quizzes list
+	const [quizzes, setQuizzes] = useState([]);
+	const [loadingQuizzes, setLoadingQuizzes] = useState(false);
+	const [quizzesError, setQuizzesError] = useState("");
 
-	// const [quizzes, setQuizzes] = useState([]);
-	// useEffect(() => {
-	//   // fetch quizzes from API when endpoint is ready
-	// }, []);
+	// Fetch quizzes created by mentor on mount
+	useEffect(() => {
+		const fetchQuizzes = async () => {
+			setLoadingQuizzes(true);
+			setQuizzesError("");
+			const token = localStorage.getItem("token");
+
+			if (!token) {
+				setQuizzesError("You must be logged in.");
+				setLoadingQuizzes(false);
+				return;
+			}
+
+			try {
+				const res = await fetch(`${getApiBaseUrl()}/quizzes/mine`, {
+					headers: {
+						Authorization: `Bearer ${token}`,
+					},
+				});
+
+				if (!res.ok) {
+					const errorData = await res.json();
+					setQuizzesError(errorData.message || "Failed to load quizzes.");
+					setLoadingQuizzes(false);
+					return;
+				}
+
+				const data = await res.json();
+				setQuizzes(data || []); // The endpoint returns an array directly
+			} catch {
+				setQuizzesError("Network error. Please try again.");
+			} finally {
+				setLoadingQuizzes(false);
+			}
+		};
+
+		fetchQuizzes();
+	}, []);
 
 	const handleCreateQuiz = async (e) => {
 		e.preventDefault();
@@ -141,38 +178,38 @@ function MentorDashboard() {
 					{loading ? "Creating..." : "Create New Quiz"}
 				</button>
 			</form>
-			{/* TODO: Quiz list will be rendered when API endpoint is available. */}
-			{/* When the backend provides endpoint, fetch and display quizzes. */}
-			{/* quiz list with Delete button (replace with real data/API): */}
-			{/*
-			<ul className="space-y-2 mt-6">
-			  {quizzes.map((quiz) => (
-			    <li key={quiz.id} className="flex justify-between items-center border p-2 rounded">
-			      <span>{quiz.title} (ID: {quiz.id})</span>
-			      <button
-			        className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-xs"
-			        onClick={() => {
-			          // TODO: Call API to delete quiz by quiz.id
-			          // 
-			          // fetch(`${getApiBaseUrl()}/quizzes/${quiz.id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } })
-			          //   .then(() => setQuizzes(quizzes.filter(q => q.id !== quiz.id)));
-			        }}
-			      >
-			        Delete
-			      </button>
-			    </li>
-			  ))}
-			</ul>
-			*/}
-			<div className="border p-4 rounded bg-gray-50 text-gray-600 text-center">
-				<p className="mb-2 font-semibold">Quiz list will appear here.</p>
-				<p className="text-xs">
-					All quiz operations in this project are based on{" "}
-					<span className="font-mono bg-gray-200 px-1 rounded">quizId</span>.
-					When the backend provides a list endpoint, this section will fetch and
-					display quizzes by{" "}
-					<span className="font-mono bg-gray-200 px-1 rounded">quizId</span>.
-				</p>
+			{/* Quiz list section */}
+			<div className="border p-4 rounded bg-gray-50 text-gray-600">
+				<p className="mb-2 font-semibold">Your Quizzes</p>
+				{loadingQuizzes ? (
+					<div>Loading quizzes...</div>
+				) : quizzesError ? (
+					<div className="text-red-600">{quizzesError}</div>
+				) : quizzes.length === 0 ? (
+					<div>No quizzes found.</div>
+				) : (
+					<ul className="space-y-2">
+						{quizzes.map((quiz) => (
+							<li
+								key={quiz.id}
+								className="flex justify-between items-center border p-2 rounded bg-white"
+							>
+								<div>
+									<span className="font-bold">{quiz.title}</span>
+									<span className="ml-2 text-xs text-gray-500">
+										(ID: {quiz.id})
+									</span>
+									<div className="text-sm text-gray-500">
+										{quiz.description}
+									</div>
+									<div className="text-xs text-gray-400">
+										Duration: {quiz.duration} seconds
+									</div>
+								</div>
+							</li>
+						))}
+					</ul>
+				)}
 			</div>
 		</div>
 	);
