@@ -14,6 +14,12 @@ export function setupSocketServer(io) {
 			logger.info(`[socket.io] Client disconnected: ${socket.id} (${reason})`);
 		});
 
+		/**
+		 * Reconnect handling:
+		 * If a student or mentor disconnects and reconnects, the client should emit 'join-room' again with quizId, userId, and role.
+		 * The server will re-add the user to the room. Optionally, broadcast 'user-reconnected' to the room for live updates.
+		 */
+
 		// Listen for join-room event from client
 		/**
 		 * Client requests to join a quiz room
@@ -34,6 +40,8 @@ export function setupSocketServer(io) {
 			socket.emit("room-joined", { quizId });
 			// Broadcast to all other clients in the room that a new user joined
 			socket.to(quizId).emit("user-joined", { userId, role });
+			// Optionally, broadcast user-reconnected for reconnect scenarios
+			socket.to(quizId).emit("user-reconnected", { userId, role });
 		});
 
 		/**
@@ -108,6 +116,30 @@ export function setupSocketServer(io) {
 			logger.info(
 				`[socket.io] Quiz ended in room: ${quizId} (endedAt: ${endedAt})`,
 			);
+		});
+
+		/**
+		 * Mentor requests the list of users in a quiz room for live dashboard
+		 * @param {Object} data - { quizId: string }
+		 * Responds with 'room-users' event: { users: [{ userId, role }] }
+		 */
+		socket.on("get-room-users", async (data) => {
+			const { quizId } = data;
+			if (!quizId) {
+				socket.emit("error", {
+					message: "quizId is required to get room users",
+				});
+				return;
+			}
+			// Get all sockets in the room
+			const clients = await io.in(quizId).fetchSockets();
+			// Collect userId and role from each socket if available
+			const users = clients.map((s) => ({
+				userId: s.handshake.auth?.userId || s.userId || "unknown",
+				role: s.handshake.auth?.role || s.role || "unknown",
+			}));
+			socket.emit("room-users", { users });
+			logger.info(`[socket.io] Sent room-users for quiz ${quizId} to mentor`);
 		});
 	});
 }
