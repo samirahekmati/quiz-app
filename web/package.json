@@ -6,7 +6,8 @@
 	"type": "module",
 	"scripts": {
 		"build": "vite build",
-		"dev": "vite"
+		"dev": "vite",
+		"lint:eslint": "eslint --max-warnings 0 --report-unused-disable-directives ."
 	},
 	"dependencies": {
 		"@tailwindcss/postcss": "^4.1.11",
