@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router";
+import { Link } from "react-router-dom";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
 
@@ -52,51 +53,68 @@ function MentorLogin() {
 	};
 
 	return (
-		<div className="p-4 max-w-md mx-auto">
-			<h1 className="text-2xl font-bold mb-4">Mentor Login</h1>
-			<form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded">
-				<div>
-					<label htmlFor="email" className="block font-medium mb-1">
-						Email
-					</label>
-					<input
-						id="email"
-						className="border rounded px-2 py-1 w-full"
-						type="email"
-						value={email}
-						onChange={(e) => setEmail(e.target.value)}
-						required
-					/>
-				</div>
-				<div>
-					<label htmlFor="password" className="block font-medium mb-1">
-						Password
-					</label>
-					<input
-						id="password"
-						className="border rounded px-2 py-1 w-full"
-						type="password"
-						value={password}
-						onChange={(e) => setPassword(e.target.value)}
-						required
-					/>
-				</div>
-				{error && <div className="text-red-600 text-sm">{error}</div>}
+		<div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+			<div className="max-w-md w-full bg-white rounded-xl shadow-lg p-8">
+				<h1 className="text-3xl font-bold text-gray-900 mb-6 text-center">
+					Mentor Login
+				</h1>
+				<form onSubmit={handleSubmit} className="space-y-6">
+					<div>
+						<label
+							htmlFor="email"
+							className="block text-sm font-medium text-gray-700 mb-2"
+						>
+							Email
+						</label>
+						<input
+							id="email"
+							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-900 placeholder-gray-500"
+							type="email"
+							placeholder="Enter your email"
+							value={email}
+							onChange={(e) => setEmail(e.target.value)}
+							required
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="password"
+							className="block text-sm font-medium text-gray-700 mb-2"
+						>
+							Password
+						</label>
+						<input
+							id="password"
+							className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 bg-white text-gray-900 placeholder-gray-500"
+							type="password"
+							placeholder="Enter your password"
+							value={password}
+							onChange={(e) => setPassword(e.target.value)}
+							required
+						/>
+					</div>
+					{error && <div className="text-red-600 text-sm">{error}</div>}
+					<button type="submit" className="btn-primary" disabled={loading}>
+						{loading ? "Logging in..." : "Login"}
+					</button>
+					<div className="text-center mt-4">
+						<span className="text-gray-600">Don&apos;t have an account? </span>
+						<Link
+							to="/mentor/signup"
+							className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+						>
+							Sign up
+						</Link>
+					</div>
+				</form>
 				<button
-					type="submit"
-					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-					disabled={loading}
+					className="mt-6 btn-secondary"
+					type="button"
+					onClick={() => navigate("/")}
 				>
-					{loading ? "Logging in..." : "Login"}
+					Back to Home
 				</button>
-			</form>
-			<button
-				className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-				type="button"
-				onClick={() => navigate("/")}
-			>
-				Back to Home
-			</button>
+			</div>
 		</div>
 	);
 }
