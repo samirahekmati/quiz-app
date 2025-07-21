@@ -2,12 +2,35 @@
  * Sets up socket.io event listeners
  * @param {import('socket.io').Server} io - The socket.io server instance
  */
-import logger from "../utils/logger.js";
 
+import jwt from "jsonwebtoken";
+
+import config from "../utils/config.js";
+import logger from "../utils/logger.js";
 // In-memory timer state for each quiz (quizId)
 const quizTimers = {};
 
 export function setupSocketServer(io) {
+	// Socket.io middleware for JWT verification (mentor only)
+	io.use((socket, next) => {
+		const token = socket.handshake.auth?.token || socket.handshake.query?.token;
+		if (token) {
+			try {
+				const decoded = jwt.verify(token, config.jwtSecret);
+				socket.userId = decoded.id;
+				socket.role = decoded.role;
+			} catch {
+				// Invalid token: block mentor, allow student (MVP)
+				return next(new Error("Invalid or expired token"));
+			}
+		} else {
+			// No token: treat as student (MVP)
+			socket.userId = socket.handshake.auth?.userId || null;
+			socket.role = socket.handshake.auth?.role || "student";
+		}
+		next();
+	});
+
 	// Listen for new client connections
 	io.on("connection", (socket) => {
 		logger.info(`[socket.io] Client connected: ${socket.id}`);
@@ -115,6 +138,22 @@ export function setupSocketServer(io) {
 					`[socket.io] Answer submitted by user ${userId} for quiz ${quizId}, question ${questionId}`,
 				);
 				socket.emit("answer-received", { success: true, answer: rows[0] });
+				// Emit progress-update to mentor in the room
+				// Find all sockets in the room with role 'mentor'
+				const clients = await io.in(quizId).fetchSockets();
+				clients
+					.filter(
+						(s) => s.handshake.auth?.role === "mentor" || s.role === "mentor",
+					)
+					.forEach((mentorSocket) => {
+						mentorSocket.emit("progress-update", {
+							quizId,
+							userId,
+							questionId,
+							answer,
+							timestamp: new Date().toISOString(),
+						});
+					});
 			} catch (err) {
 				logger.error("[socket.io] Error saving answer:", err);
 				socket.emit("error", { message: "Failed to save answer" });
