@@ -4,6 +4,9 @@
  */
 import logger from "../utils/logger.js";
 
+// In-memory timer state for each quiz (quizId)
+const quizTimers = {};
+
 export function setupSocketServer(io) {
 	// Listen for new client connections
 	io.on("connection", (socket) => {
@@ -56,6 +59,25 @@ export function setupSocketServer(io) {
 				});
 				return;
 			}
+			// If timer already exists for this quiz, clear it (prevent duplicate)
+			if (quizTimers[quizId]?.timeout) {
+				clearTimeout(quizTimers[quizId].timeout);
+			}
+			// Track timer state in memory
+			quizTimers[quizId] = {
+				startedAt,
+				duration,
+				endedAt: null,
+				timeout: setTimeout(() => {
+					// Timer finished, end quiz for all
+					const endedAt = new Date().toISOString();
+					io.to(quizId).emit("quiz-ended", { endedAt });
+					logger.info(
+						`[socket.io] Quiz auto-ended in room: ${quizId} (endedAt: ${endedAt})`,
+					);
+					quizTimers[quizId].endedAt = endedAt;
+				}, duration * 1000),
+			};
 			// Broadcast to all clients in the room that the quiz has started
 			io.to(quizId).emit("quiz-started", { startedAt, duration });
 			logger.info(
@@ -111,11 +133,43 @@ export function setupSocketServer(io) {
 				});
 				return;
 			}
+			// If timer exists, clear it (force end)
+			if (quizTimers[quizId]?.timeout) {
+				clearTimeout(quizTimers[quizId].timeout);
+				quizTimers[quizId].endedAt = endedAt;
+			}
 			// Broadcast to all clients in the room that the quiz has ended
 			io.to(quizId).emit("quiz-ended", { endedAt });
 			logger.info(
-				`[socket.io] Quiz ended in room: ${quizId} (endedAt: ${endedAt})`,
+				`[socket.io] Quiz ended in room: ${quizId} (endedAt: ${endedAt}) [force end]`,
 			);
+		});
+
+		/**
+		 * Timer sync: client requests current timer state for a quiz
+		 * @param {Object} data - { quizId: string }
+		 * Responds with { startedAt, duration, endedAt }
+		 */
+		socket.on("timer-sync", (data) => {
+			const { quizId } = data;
+			if (!quizId) {
+				socket.emit("error", { message: "quizId is required for timer sync" });
+				return;
+			}
+			const timer = quizTimers[quizId];
+			if (!timer) {
+				socket.emit("timer-sync", {
+					startedAt: null,
+					duration: null,
+					endedAt: null,
+				});
+			} else {
+				socket.emit("timer-sync", {
+					startedAt: timer.startedAt,
+					duration: timer.duration,
+					endedAt: timer.endedAt,
+				});
+			}
 		});
 
 		/**
