@@ -1,7 +1,14 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import {
+	connectSocket,
+	emitEvent,
+	onEvent,
+	offEvent,
+} from "../services/socket";
 
 function StudentJoin() {
 	const [username, setUsername] = useState("");
@@ -22,27 +29,32 @@ function StudentJoin() {
 				setLoading(false);
 				return;
 			}
-			// TODO: POST /api/quizzes/:quizId/join with { username } and save studentId for later use
-			//
-			// const joinRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/join`, {
-			//   method: "POST",
-			//   headers: { "Content-Type": "application/json" },
-			//   body: JSON.stringify({ username }),
-			// });
-			// const joinData = await joinRes.json();
-			// if (joinRes.ok) {
-			//   localStorage.setItem("studentId", joinData.studentId);
-			//   navigate(`/student/quiz/${quizId}`);
-			// } else {
-			//   setError(joinData.message || "Failed to join quiz.");
-			// }
-			navigate(`/student/quiz/${quizId}`);
+			// Connect socket (student)
+			connectSocket({ userId: username, role: "student" });
+			// Emit join-room event
+			emitEvent("join-room", { quizId, userId: username, role: "student" });
+			// Listen for room-joined
+			onEvent("room-joined", () => {
+				navigate(`/student/quiz/${quizId}`);
+			});
+			// Listen for error
+			onEvent("error", (err) =>
+				setError(err.message || "Failed to join quiz."),
+			);
 		} catch {
 			setError("Network error. Please try again.");
 		} finally {
 			setLoading(false);
 		}
 	};
+
+	// Cleanup listeners on unmount
+	useEffect(() => {
+		return () => {
+			offEvent("room-joined");
+			offEvent("error");
+		};
+	}, []);
 
 	return (
 		<div className="p-4 max-w-md mx-auto">
@@ -89,7 +101,6 @@ function StudentJoin() {
 			>
 				Back to Home
 			</button>
-			{/* TODO: API integration for join quiz and username validation when backend endpoint is available */}
 		</div>
 	);
 }
