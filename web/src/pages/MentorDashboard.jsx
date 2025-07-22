@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import { connectSocket, emitEvent } from "../services/socket";
 
 function MentorDashboard() {
 	const navigate = useNavigate();
@@ -25,6 +26,12 @@ function MentorDashboard() {
 	const [quizzes, setQuizzes] = useState([]);
 	const [loadingQuizzes, setLoadingQuizzes] = useState(false);
 	const [quizzesError, setQuizzesError] = useState("");
+
+	// Real-time: quizId state for joining room
+	const [activeQuizId, setActiveQuizId] = useState("");
+	// Real-time: state for students in the room
+	const [students, setStudents] = useState([]);
+	const [roomUsersError, setRoomUsersError] = useState("");
 
 	// Fetch quizzes created by mentor on mount
 	useEffect(() => {
@@ -64,6 +71,43 @@ function MentorDashboard() {
 
 		fetchQuizzes();
 	}, []);
+
+	// Connect mentor socket and join quiz room when activeQuizId changes
+	useEffect(() => {
+		// Only connect if mentor is logged in and quizId is selected
+		const token = localStorage.getItem("token");
+		const mentorId = localStorage.getItem("currentMentorId");
+		if (!token || !mentorId || !activeQuizId) return;
+		// Connect socket (mentor)
+		connectSocket({ token, userId: mentorId, role: "mentor" });
+		// Join quiz room as mentor
+		emitEvent("join-room", {
+			quizId: activeQuizId,
+			userId: mentorId,
+			role: "mentor",
+		});
+		// Emit get-room-users to fetch current students
+		emitEvent("get-room-users", { quizId: activeQuizId });
+		// Listen for room-users event
+		const handleRoomUsers = (data) => {
+			if (data && Array.isArray(data.users)) {
+				setStudents(data.users.filter((u) => u.role === "student"));
+				setRoomUsersError("");
+			} else {
+				setRoomUsersError("Failed to fetch students in room.");
+			}
+		};
+		const handleRoomUsersError = (err) => {
+			setRoomUsersError(err.message || "Error fetching room users.");
+		};
+		window.addEventListener("room-users", handleRoomUsers);
+		window.addEventListener("error", handleRoomUsersError);
+		// Cleanup listeners on unmount or quiz change
+		return () => {
+			window.removeEventListener("room-users", handleRoomUsers);
+			window.removeEventListener("error", handleRoomUsersError);
+		};
+	}, [activeQuizId]);
 
 	const handleCreateQuiz = async (e) => {
 		e.preventDefault();
@@ -206,11 +250,41 @@ function MentorDashboard() {
 										Duration: {quiz.duration} seconds
 									</div>
 								</div>
+								<button onClick={() => setActiveQuizId(quiz.id)}>Manage</button>
 							</li>
 						))}
 					</ul>
 				)}
 			</div>
+			{activeQuizId && (
+				<div className="mt-4 border p-4 rounded bg-gray-50">
+					<div className="font-semibold mb-2">Students in Room</div>
+					{roomUsersError && (
+						<div className="text-red-600 text-sm mb-2">{roomUsersError}</div>
+					)}
+					<button
+						className="mb-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
+						onClick={() =>
+							emitEvent("get-room-users", { quizId: activeQuizId })
+						}
+					>
+						Refresh
+					</button>
+					{students.length === 0 ? (
+						<div className="text-gray-500 text-sm">
+							No students in this room yet.
+						</div>
+					) : (
+						<ul className="space-y-1">
+							{students.map((s, i) => (
+								<li key={i} className="text-sm">
+									{s.userId}
+								</li>
+							))}
+						</ul>
+					)}
+				</div>
+			)}
 		</div>
 	);
 }
