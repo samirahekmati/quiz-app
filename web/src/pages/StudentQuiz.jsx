@@ -7,6 +7,7 @@ import {
 	emitEvent,
 	onEvent,
 	offEvent,
+	registerReconnectHandler,
 } from "../services/socket";
 
 function StudentQuiz() {
@@ -59,6 +60,16 @@ function StudentQuiz() {
 			quizId,
 			userId: localStorage.getItem("studentUsername") || "",
 			role: "student",
+		});
+
+		// Reconnect handling: on connect/reconnect, re-emit join-room and timer-sync
+		registerReconnectHandler(() => {
+			emitEvent("join-room", {
+				quizId,
+				userId: localStorage.getItem("studentUsername") || "",
+				role: "student",
+			});
+			emitEvent("timer-sync", { quizId });
 		});
 
 		// Listen for quiz-started event

@@ -2,7 +2,11 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
-import { connectSocket, emitEvent } from "../services/socket";
+import {
+	connectSocket,
+	emitEvent,
+	registerReconnectHandler,
+} from "../services/socket";
 
 function MentorDashboard() {
 	const navigate = useNavigate();
@@ -155,6 +159,18 @@ function MentorDashboard() {
 		window.addEventListener("quiz-started", handleQuizStarted);
 		window.addEventListener("quiz-ended", handleQuizEnded);
 		window.addEventListener("error", handleQuizError);
+		// Reconnect handling: on connect/reconnect, re-emit join-room and get-room-users
+		registerReconnectHandler(() => {
+			const token = localStorage.getItem("token");
+			const mentorId = localStorage.getItem("currentMentorId");
+			if (!token || !mentorId || !activeQuizId) return;
+			emitEvent("join-room", {
+				quizId: activeQuizId,
+				userId: mentorId,
+				role: "mentor",
+			});
+			emitEvent("get-room-users", { quizId: activeQuizId });
+		});
 		// Cleanup listeners on unmount or quiz change
 		return () => {
 			window.removeEventListener("room-users", handleRoomUsers);

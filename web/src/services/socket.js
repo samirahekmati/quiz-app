@@ -6,6 +6,21 @@ import { io } from "socket.io-client";
  * Mentor: pass JWT as token. Student: pass userId and role.
  */
 let socket = null;
+let reconnectHandler = null;
+
+/**
+ * Register a handler to run on socket connect/reconnect (for re-joining room, timer sync, etc.)
+ * @param {function} handler - function to call on connect/reconnect
+ */
+export function registerReconnectHandler(handler) {
+	reconnectHandler = handler;
+	if (socket) {
+		socket.off("connect", reconnectHandler);
+		socket.off("reconnect", reconnectHandler);
+		socket.on("connect", reconnectHandler);
+		socket.on("reconnect", reconnectHandler);
+	}
+}
 
 /**
  * Connect to socket.io server.
@@ -19,6 +34,11 @@ export function connectSocket({ token, userId, role }) {
 		autoConnect: true,
 		transports: ["websocket"],
 	});
+	// Attach reconnect handler if registered
+	if (reconnectHandler) {
+		socket.on("connect", reconnectHandler);
+		socket.on("reconnect", reconnectHandler);
+	}
 	return socket;
 }
 
