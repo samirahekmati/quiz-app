@@ -32,6 +32,8 @@ function MentorDashboard() {
 	// Real-time: state for students in the room
 	const [students, setStudents] = useState([]);
 	const [roomUsersError, setRoomUsersError] = useState("");
+	// Real-time: state for live student progress (userId -> { questionId: { answer, timestamp } })
+	const [progress, setProgress] = useState({});
 
 	// Fetch quizzes created by mentor on mount
 	useEffect(() => {
@@ -102,10 +104,29 @@ function MentorDashboard() {
 		};
 		window.addEventListener("room-users", handleRoomUsers);
 		window.addEventListener("error", handleRoomUsersError);
+		// Listen for progress-update event (live student answers)
+		const handleProgressUpdate = (data) => {
+			if (!data || !data.userId || !data.questionId) return;
+			setProgress((prev) => {
+				const userProgress = prev[data.userId] || {};
+				return {
+					...prev,
+					[data.userId]: {
+						...userProgress,
+						[data.questionId]: {
+							answer: data.answer,
+							timestamp: data.timestamp,
+						},
+					},
+				};
+			});
+		};
+		window.addEventListener("progress-update", handleProgressUpdate);
 		// Cleanup listeners on unmount or quiz change
 		return () => {
 			window.removeEventListener("room-users", handleRoomUsers);
 			window.removeEventListener("error", handleRoomUsersError);
+			window.removeEventListener("progress-update", handleProgressUpdate);
 		};
 	}, [activeQuizId]);
 
@@ -283,6 +304,49 @@ function MentorDashboard() {
 							))}
 						</ul>
 					)}
+					{/* Live Progress Table */}
+					<div className="mt-6">
+						<div className="font-semibold mb-2">Live Progress</div>
+						{students.length === 0 ? (
+							<div className="text-gray-500 text-sm">No progress to show.</div>
+						) : (
+							<table className="w-full text-xs border">
+								<thead>
+									<tr>
+										<th className="border px-2 py-1">Student</th>
+										<th className="border px-2 py-1">Question</th>
+										<th className="border px-2 py-1">Answer</th>
+										<th className="border px-2 py-1">Time</th>
+									</tr>
+								</thead>
+								<tbody>
+									{students.map((s) =>
+										progress[s.userId] ? (
+											Object.entries(progress[s.userId]).map(([qId, p]) => (
+												<tr key={s.userId + qId}>
+													<td className="border px-2 py-1">{s.userId}</td>
+													<td className="border px-2 py-1">{qId}</td>
+													<td className="border px-2 py-1">{p.answer}</td>
+													<td className="border px-2 py-1">
+														{p.timestamp
+															? new Date(p.timestamp).toLocaleTimeString()
+															: "-"}
+													</td>
+												</tr>
+											))
+										) : (
+											<tr key={s.userId + "-none"}>
+												<td className="border px-2 py-1">{s.userId}</td>
+												<td className="border px-2 py-1" colSpan={3}>
+													No answers yet
+												</td>
+											</tr>
+										),
+									)}
+								</tbody>
+							</table>
+						)}
+					</div>
 				</div>
 			)}
 		</div>
