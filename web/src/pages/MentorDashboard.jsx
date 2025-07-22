@@ -34,6 +34,11 @@ function MentorDashboard() {
 	const [roomUsersError, setRoomUsersError] = useState("");
 	// Real-time: state for live student progress (userId -> { questionId: { answer, timestamp } })
 	const [progress, setProgress] = useState({});
+	// Real-time: state for quiz status and error
+	const [quizStarted, setQuizStarted] = useState(false);
+	const [quizEnded, setQuizEnded] = useState(false);
+	const [quizStatusMsg, setQuizStatusMsg] = useState("");
+	const [quizError, setQuizError] = useState("");
 
 	// Fetch quizzes created by mentor on mount
 	useEffect(() => {
@@ -122,11 +127,42 @@ function MentorDashboard() {
 			});
 		};
 		window.addEventListener("progress-update", handleProgressUpdate);
+		// Listen for quiz-started event
+		const handleQuizStarted = (data) => {
+			setQuizStarted(true);
+			setQuizEnded(false);
+			setQuizStatusMsg(
+				"Quiz started at " +
+					(data?.startedAt
+						? new Date(data.startedAt).toLocaleTimeString()
+						: "now"),
+			);
+		};
+		// Listen for quiz-ended event
+		const handleQuizEnded = (data) => {
+			setQuizStarted(false);
+			setQuizEnded(true);
+			setQuizStatusMsg(
+				"Quiz ended at " +
+					(data?.endedAt ? new Date(data.endedAt).toLocaleTimeString() : "now"),
+			);
+		};
+		// Listen for error event
+		const handleQuizError = (err) => {
+			setQuizError(err.message || "An error occurred.");
+			setTimeout(() => setQuizError(""), 4000);
+		};
+		window.addEventListener("quiz-started", handleQuizStarted);
+		window.addEventListener("quiz-ended", handleQuizEnded);
+		window.addEventListener("error", handleQuizError);
 		// Cleanup listeners on unmount or quiz change
 		return () => {
 			window.removeEventListener("room-users", handleRoomUsers);
 			window.removeEventListener("error", handleRoomUsersError);
 			window.removeEventListener("progress-update", handleProgressUpdate);
+			window.removeEventListener("quiz-started", handleQuizStarted);
+			window.removeEventListener("quiz-ended", handleQuizEnded);
+			window.removeEventListener("error", handleQuizError);
 		};
 	}, [activeQuizId]);
 
@@ -279,6 +315,46 @@ function MentorDashboard() {
 			</div>
 			{activeQuizId && (
 				<div className="mt-4 border p-4 rounded bg-gray-50">
+					{/* Quiz status and error messages */}
+					{quizStatusMsg && (
+						<div className="mb-2 text-blue-700 text-sm">{quizStatusMsg}</div>
+					)}
+					{quizError && (
+						<div className="mb-2 text-red-600 text-sm">{quizError}</div>
+					)}
+					{/* Quiz control buttons */}
+					<div className="mb-4 flex gap-2">
+						{!quizStarted && !quizEnded && (
+							<button
+								className="px-3 py-1 bg-green-600 text-white rounded text-sm"
+								onClick={() => {
+									// Emit quiz-started event
+									emitEvent("quiz-started", {
+										quizId: activeQuizId,
+										startedAt: new Date().toISOString(),
+										duration: 60 * 5, // 5 minutes default, can be improved
+									});
+								}}
+							>
+								Start Quiz
+							</button>
+						)}
+						{quizStarted && !quizEnded && (
+							<button
+								className="px-3 py-1 bg-red-600 text-white rounded text-sm"
+								onClick={() => {
+									// Emit quiz-ended event (force end)
+									emitEvent("quiz-ended", {
+										quizId: activeQuizId,
+										endedAt: new Date().toISOString(),
+									});
+								}}
+							>
+								End Quiz
+							</button>
+						)}
+					</div>
+					{/* Students in Room */}
 					<div className="font-semibold mb-2">Students in Room</div>
 					{roomUsersError && (
 						<div className="text-red-600 text-sm mb-2">{roomUsersError}</div>
