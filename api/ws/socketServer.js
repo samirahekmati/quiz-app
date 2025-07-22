@@ -18,7 +18,8 @@ export function setupSocketServer(io) {
 			try {
 				const decoded = jwt.verify(token, config.jwtSecret);
 				socket.userId = decoded.id;
-				socket.role = decoded.role;
+				// Set role to 'mentor' for any valid JWT (no need for role in JWT or DB)
+				socket.role = "mentor";
 			} catch {
 				// Invalid token: block mentor, allow student (MVP)
 				return next(new Error("Invalid or expired token"));
