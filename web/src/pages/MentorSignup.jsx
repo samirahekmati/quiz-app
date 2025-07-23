@@ -139,7 +139,7 @@ function MentorSignup() {
 
 							<Link
 								to="/mentor/login"
-								className="text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+								className="text-purple-500 hover:text-purple-800 font-medium transition-colors duration-200"
 							>
 								Sign in
 							</Link>
