@@ -1,38 +1,40 @@
-import { useState } from "react";
+import { Link } from "react-router-dom";
 
-import viteLogo from "/vite.svg";
-
-import reactLogo from "../assets/react.svg";
-import ServerStatus from "../components/ServerStatus";
-
-function App() {
-	const [count, setCount] = useState(0);
-
+// Landing page for the quiz app (MVP ONLY)
+// In production, you can improve the design and add branding/logo
+function Home() {
 	return (
-		<>
-			<div>
-				<a href="https://vitejs.dev" target="_blank" rel="noreferrer">
-					<img src={viteLogo} className="logo" alt="Vite logo" />
-				</a>
-				<a href="https://react.dev" target="_blank" rel="noreferrer">
-					<img src={reactLogo} className="logo react" alt="React logo" />
-				</a>
-			</div>
-			<h1>Vite + React</h1>
-			<div className="card">
-				<button onClick={() => setCount((count) => count + 1)}>
-					count is {count}
-				</button>
-				<p>
-					Edit <code>src/App.jsx</code> and save to test HMR
+		<main className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
+			<div className="max-w-md w-full p-8 bg-white rounded shadow text-center">
+				<h1 className="text-3xl font-bold mb-6">Welcome to Mentoro</h1>
+				<p className="mb-8 text-gray-600">
+					Please select your role to continue:
 				</p>
+				<div className="flex flex-col gap-4">
+					<Link
+						to="/mentor/signup"
+						className="btn-primary text-lg font-semibold"
+					>
+						Sign Up as a Mentor
+					</Link>
+					<br />
+					<Link
+						to="/mentor/login"
+						className="btn-primary text-lg font-semibold"
+					>
+						Log in as a Mentor
+					</Link>
+					<br />
+					<Link
+						to="/student/join"
+						className="btn-student text-lg font-semibold"
+					>
+						I am a Student
+					</Link>
+				</div>
 			</div>
-			<p className="read-the-docs">
-				Click on the Vite and React logos to learn more
-			</p>
-			<ServerStatus />
-		</>
+		</main>
 	);
 }
 
-export default App;
+export default Home;

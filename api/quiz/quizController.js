@@ -127,6 +127,30 @@ export async function getQuizById(req, res) {
 	}
 }
 
+// Get the quiz created by a specific user by userId
+export async function getQuizzesByUser(req, res) {
+	const userId = req.user.id;
+
+	try {
+		const result = await db.query(
+			`
+			SELECT id, title, description, duration
+			FROM quizzes
+			WHERE user_id = $1
+			ORDER BY created_at DESC
+			`,
+			[userId],
+		);
+
+		res.json(result.rows);
+	} catch (error) {
+		logger.error("Error fetching quizzes by user:", error);
+		res
+			.status(500)
+			.json({ message: "Server error while fetching your quizzes" });
+	}
+}
+
 // Delete a quiz and its questions
 export async function deleteQuiz(req, res) {
 	const { quizId } = req.params;
