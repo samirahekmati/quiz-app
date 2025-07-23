@@ -180,36 +180,42 @@ function QuizEdit() {
 	};
 
 	return (
-		<div className="p-4 max-w-2xl mx-auto">
-			<h1 className="text-2xl font-bold mb-4">Edit Quiz</h1>
+		<div className="p-8 max-w-2xl mx-auto bg-purple-100 rounded-2xl shadow-lg border-t-4 border-purple-500">
+			<h1 className="text-2xl font-bold mb-4 text-purple-800">Edit Quiz</h1>
 			{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
 			{loading && (
-				<div className="text-gray-500 text-sm mb-2">Loading quiz...</div>
+				<div className="text-purple-500 text-sm mb-2">Loading quiz...</div>
 			)}
 			{/* Add Question Form */}
 			<form
 				onSubmit={handleAddQuestion}
-				className="mb-8 space-y-4 border p-4 rounded"
+				className="mb-8 space-y-4 bg-white p-6 rounded-xl shadow border border-purple-200"
 			>
 				<div>
-					<label htmlFor="question-text" className="block font-medium mb-1">
+					<label
+						htmlFor="question-text"
+						className="block font-medium mb-1 text-purple-700"
+					>
 						Question Text
 					</label>
 					<textarea
 						id="question-text"
-						className="border rounded px-2 py-1 w-full min-h-[60px]"
+						className="border rounded px-2 py-1 w-full min-h-[60px] focus:outline-none focus:ring-2 focus:ring-purple-400"
 						value={questionText}
 						onChange={(e) => setQuestionText(e.target.value)}
 						required
 					/>
 				</div>
 				<div>
-					<label htmlFor="question-type" className="block font-medium mb-1">
+					<label
+						htmlFor="question-type"
+						className="block font-medium mb-1 text-purple-700"
+					>
 						Type
 					</label>
 					<select
 						id="question-type"
-						className="border rounded px-2 py-1 w-full"
+						className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
 						value={questionType}
 						onChange={(e) => setQuestionType(e.target.value)}
 					>
@@ -220,12 +226,15 @@ function QuizEdit() {
 				{/* If type is text, show correct answer input */}
 				{questionType === "text" && (
 					<div>
-						<label htmlFor="correct-answer" className="block font-medium mb-1">
+						<label
+							htmlFor="correct-answer"
+							className="block font-medium mb-1 text-purple-700"
+						>
 							Correct Answer
 						</label>
 						<input
 							id="correct-answer"
-							className="border rounded px-2 py-1 w-full"
+							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
 							value={correctAnswer}
 							onChange={(e) => setCorrectAnswer(e.target.value)}
 							required
@@ -234,14 +243,14 @@ function QuizEdit() {
 				)}
 				{/* If type is multiple-choice, show dynamic option fields */}
 				{questionType === "multiple-choice" && (
-					<div className="border rounded p-3 mb-2">
-						<div className="font-medium mb-2">Options</div>
+					<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
+						<div className="font-medium mb-2 text-purple-700">Options</div>
 						<ul className="mb-2">
 							{optionFields.map((opt, idx) => (
 								<li key={idx} className="flex items-center gap-2 mb-1">
 									<span>{String.fromCharCode(65 + idx)}.</span>
 									<input
-										className="border rounded px-2 py-1"
+										className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
 										value={opt.text}
 										onChange={(e) =>
 											handleOptionChange(idx, "text", e.target.value)
@@ -249,7 +258,7 @@ function QuizEdit() {
 										placeholder={`Option ${idx + 1}`}
 										required
 									/>
-									<label className="flex items-center gap-1">
+									<label className="flex items-center gap-1 text-purple-700">
 										<input
 											type="checkbox"
 											checked={opt.is_correct}
@@ -265,7 +274,7 @@ function QuizEdit() {
 						{/* Add Option button (max 4) */}
 						{optionFields.length < 4 && (
 							<button
-								className="px-2 py-1 bg-gray-200 rounded"
+								className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 transition"
 								onClick={handleAddOptionField}
 							>
 								Add Option
@@ -276,7 +285,7 @@ function QuizEdit() {
 				<div className="flex gap-2">
 					<button
 						type="submit"
-						className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+						className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
 					>
 						{editingQuestionId ? "Save Changes" : "Save Question"}
 					</button>
@@ -292,41 +301,43 @@ function QuizEdit() {
 				</div>
 			</form>
 			{/* Render questions list from API */}
-			<div className="border p-4 rounded bg-gray-50 text-gray-600 text-center">
+			<div className="border p-4 rounded bg-purple-50 text-purple-700 text-center border-purple-200">
 				{questions.length === 0 ? (
 					<p className="mb-2 font-semibold">No questions yet.</p>
 				) : (
 					<>
-						<div className="font-semibold mb-2">Questions</div>
+						<div className="font-semibold mb-2 text-purple-800">Questions</div>
 						<ul className="space-y-3">
 							{questions.map((q, idx) => (
 								<li
 									key={q.id}
-									className="border p-3 rounded flex justify-between items-center"
+									className="border p-3 rounded flex justify-between items-center bg-white border-purple-200"
 								>
 									<div>
-										<span className="font-bold mr-2">Q{idx + 1}:</span>
+										<span className="font-bold mr-2 text-purple-800">
+											Q{idx + 1}:
+										</span>
 										<span>{q.text}</span>
-										<span className="ml-2 text-xs text-gray-500">
+										<span className="ml-2 text-xs text-purple-400">
 											[{q.type}]
 										</span>
 									</div>
 									<div className="flex gap-2">
 										<button
 											type="button"
-											className="px-2 py-1 bg-gray-200 rounded hover:bg-gray-300 text-sm"
+											className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 text-sm transition"
 											onClick={() => handleEditQuestion(q)}
 										>
 											Edit
 										</button>
 										<button
 											type="button"
-											className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm"
+											className="px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-600 text-sm transition"
 											onClick={() => {
 												// TODO: Call API to delete question by q.id
 												//
 												// fetch(`${getApiBaseUrl()}/quizzes/${quizId}/questions/${q.id}`, { method: 'DELETE' })
-												//   .then(() => setQuestions(questions.filter(qq => qq.id !== q.id)));
+												//   .then(() => setQuestions(questions.filter(qq => qq.id !== q.id));
 											}}
 										>
 											Delete
@@ -341,7 +352,7 @@ function QuizEdit() {
 			<div className="flex gap-2 mt-6">
 				<button
 					onClick={handleFinishQuiz}
-					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
+					className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
 				>
 					Finish
 				</button>
