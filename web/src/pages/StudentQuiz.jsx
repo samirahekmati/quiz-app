@@ -16,6 +16,7 @@ function StudentQuiz() {
 	const [quiz, setQuiz] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [showError, setShowError] = useState(false);
 	const [current, setCurrent] = useState(0);
 	const [answers, setAnswers] = useState({});
 	const [textAnswer, setTextAnswer] = useState("");
@@ -105,6 +106,8 @@ function StudentQuiz() {
 		// Listen for error event
 		const handleError = (err) => {
 			setError(err.message || "An error occurred.");
+			setShowError(true);
+			setTimeout(() => setShowError(false), 4000);
 		};
 		onEvent("error", handleError);
 
@@ -130,9 +133,19 @@ function StudentQuiz() {
 	if (loading) {
 		return <div className="p-4 text-center">Loading quiz...</div>;
 	}
-	if (error) {
-		return <div className="p-4 text-center text-red-600">{error}</div>;
-	}
+	// Show error alert at the top (dismissable)
+	const errorAlert = showError && error && (
+		<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
+			<span>{error}</span>
+			<button
+				className="ml-4 text-red-700 font-bold px-2"
+				onClick={() => setShowError(false)}
+				aria-label="Dismiss error"
+			>
+				×
+			</button>
+		</div>
+	);
 	if (!quiz) {
 		return <div className="p-4 text-center text-red-600">Quiz not found.</div>;
 	}
@@ -182,17 +195,18 @@ function StudentQuiz() {
 	if (!quizStarted) {
 		return (
 			<div className="p-4 max-w-md mx-auto text-center">
+				{errorAlert}
 				<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
 				<div className="text-lg mb-2">
 					Waiting for the mentor to start the quiz. Please stay on this page...
 				</div>
-				{error && <div className="text-red-600 text-sm">{error}</div>}
 			</div>
 		);
 	}
 
 	return (
 		<div className="p-4 max-w-md mx-auto">
+			{errorAlert}
 			<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
 			<div className="mb-2 text-right font-mono">
 				Time left: {timer !== null ? timer : "-"}s
@@ -255,7 +269,6 @@ function StudentQuiz() {
 					{current < questions.length - 1 ? "Next" : "Finish"}
 				</button>
 			</form>
-			{error && <div className="text-red-600 text-sm mt-2">{error}</div>}
 		</div>
 	);
 }

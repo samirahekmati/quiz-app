@@ -43,6 +43,7 @@ function MentorDashboard() {
 	const [quizEnded, setQuizEnded] = useState(false);
 	const [quizStatusMsg, setQuizStatusMsg] = useState("");
 	const [quizError, setQuizError] = useState("");
+	const [showQuizError, setShowQuizError] = useState(false);
 
 	// Fetch quizzes created by mentor on mount
 	useEffect(() => {
@@ -154,7 +155,8 @@ function MentorDashboard() {
 		// Listen for error event
 		const handleQuizError = (err) => {
 			setQuizError(err.message || "An error occurred.");
-			setTimeout(() => setQuizError(""), 4000);
+			setShowQuizError(true);
+			setTimeout(() => setShowQuizError(false), 4000);
 		};
 		window.addEventListener("quiz-started", handleQuizStarted);
 		window.addEventListener("quiz-ended", handleQuizEnded);
@@ -235,6 +237,19 @@ function MentorDashboard() {
 
 	return (
 		<div className="p-4 max-w-2xl mx-auto">
+			{/* Error alert at the top (dismissable) */}
+			{showQuizError && quizError && (
+				<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
+					<span>{quizError}</span>
+					<button
+						className="ml-4 text-red-700 font-bold px-2"
+						onClick={() => setShowQuizError(false)}
+						aria-label="Dismiss error"
+					>
+						×
+					</button>
+				</div>
+			)}
 			<div className="flex justify-between items-center mb-4">
 				<h1 className="text-2xl font-bold">Mentor Dashboard</h1>
 				<button
@@ -334,9 +349,6 @@ function MentorDashboard() {
 					{/* Quiz status and error messages */}
 					{quizStatusMsg && (
 						<div className="mb-2 text-blue-700 text-sm">{quizStatusMsg}</div>
-					)}
-					{quizError && (
-						<div className="mb-2 text-red-600 text-sm">{quizError}</div>
 					)}
 					{/* Quiz control buttons */}
 					<div className="mb-4 flex gap-2">

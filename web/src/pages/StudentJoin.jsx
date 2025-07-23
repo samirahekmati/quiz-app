@@ -14,6 +14,7 @@ function StudentJoin() {
 	const [username, setUsername] = useState("");
 	const [quizId, setQuizId] = useState("");
 	const [error, setError] = useState("");
+	const [showError, setShowError] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
@@ -31,6 +32,8 @@ function StudentJoin() {
 			}
 			// Connect socket (student)
 			connectSocket({ userId: username, role: "student" });
+			// Set student username in cookie for backend identification (MVP)
+			document.cookie = `username=${encodeURIComponent(username)}; path=/; max-age=86400`;
 			// Emit join-room event
 			emitEvent("join-room", { quizId, userId: username, role: "student" });
 			// Listen for room-joined
@@ -43,6 +46,8 @@ function StudentJoin() {
 			);
 		} catch {
 			setError("Network error. Please try again.");
+			setShowError(true);
+			setTimeout(() => setShowError(false), 4000);
 		} finally {
 			setLoading(false);
 		}
@@ -58,6 +63,19 @@ function StudentJoin() {
 
 	return (
 		<div className="p-4 max-w-md mx-auto">
+			{/* Error alert at the top (dismissable) */}
+			{showError && error && (
+				<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
+					<span>{error}</span>
+					<button
+						className="ml-4 text-red-700 font-bold px-2"
+						onClick={() => setShowError(false)}
+						aria-label="Dismiss error"
+					>
+						×
+					</button>
+				</div>
+			)}
 			<h1 className="text-2xl font-bold mb-4">Join Quiz</h1>
 			<form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded">
 				<div>
