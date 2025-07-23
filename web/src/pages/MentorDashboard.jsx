@@ -133,7 +133,7 @@ function MentorDashboard() {
 		mainContent = (
 			<div className="max-w-2xl mx-auto">
 				<button
-					className="mb-6 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 transition font-semibold shadow"
+					className="mb-6 px-4 py-2 rounded bg-purple-500 text-white hover:bg-purple-700 transition font-semibold shadow"
 					onClick={() => {
 						setSelectedQuiz(null);
 						setQuizDetail(null);
@@ -148,8 +148,22 @@ function MentorDashboard() {
 				) : quizDetailError ? (
 					<div className="text-red-500">{quizDetailError}</div>
 				) : quizDetail ? (
-					<div className="bg-purple-100 p-8 rounded-2xl shadow-lg border-t-4 border-purple-500">
-						<h2 className="text-2xl font-bold mb-2 text-purple-800">
+					<div className="bg-purple-100 p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 relative">
+						{/* Start this quiz button */}
+						<button
+							className="absolute left-8 top-8 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+							onClick={() => console.log("Start this quiz clicked")}
+						>
+							Start this quiz
+						</button>
+						{/* Edit this quiz button */}
+						<button
+							className="absolute right-8 top-8 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+							onClick={() => navigate(`/mentor/quiz/${quizDetail.id}/edit`)}
+						>
+							Edit this quiz
+						</button>
+						<h2 className="text-2xl font-bold mb-2 text-purple-800 mt-16">
 							{quizDetail.title}
 						</h2>
 						<div className="mb-2 text-purple-700">{quizDetail.description}</div>
@@ -309,23 +323,18 @@ function MentorDashboard() {
 				) : (
 					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
 						{quizzes.map((quiz) => (
-							<div
+							<button
 								key={quiz.id}
-								className="bg-purple-100 rounded-lg shadow p-6 border border-purple-200 relative"
+								type="button"
+								onClick={() => setSelectedQuiz(quiz)}
+								className="bg-purple-100 rounded-lg shadow p-6 border border-purple-200 relative w-full text-left hover:scale-105 transition-transform focus:outline-none"
+								aria-label={`View quiz ${quiz.title}`}
 							>
-								<button
-									type="button"
-									className="absolute inset-0 w-full h-full z-0 cursor-pointer hover:scale-105 transition-transform rounded-lg focus:outline-none"
-									onClick={() => setSelectedQuiz(quiz)}
-									aria-label={`View quiz ${quiz.title}`}
-								/>
-								<h2 className="text-lg font-bold text-purple-900 mb-2 relative z-10">
+								<h2 className="text-lg font-bold text-purple-900 mb-2">
 									{quiz.title}
 								</h2>
-								<p className="text-purple-700 mb-2 relative z-10">
-									{quiz.description}
-								</p>
-								<div className="flex justify-between items-center mt-4 relative z-10">
+								<p className="text-purple-700 mb-2">{quiz.description}</p>
+								<div className="flex justify-between items-center mt-4">
 									<span className="bg-purple-500 text-white px-2 py-1 rounded text-xs">
 										ID: {quiz.id}
 									</span>
@@ -343,7 +352,7 @@ function MentorDashboard() {
 								>
 									{deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
 								</button>
-							</div>
+							</button>
 						))}
 					</div>
 				)}
