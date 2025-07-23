@@ -3,7 +3,6 @@ import { z } from "zod";
 import db from "../db.js";
 import logger from "../utils/logger.js";
 
-
 // Define the schema for quiz creation
 const createQuizSchema = z.object({
 	title: z
@@ -161,3 +160,8 @@ export async function deleteQuiz(req, res) {
 		res.status(500).json({ message: "Server error while deleting quiz" });
 	}
 }
+
+export const updateQuizSchema = z.object({
+	title: z.string().min(1, "Title is required").optional(),
+	description: z.string().min(1, "Description is required").optional(),
+});
