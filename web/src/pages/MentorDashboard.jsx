@@ -7,8 +7,9 @@ import {
 	createQuiz,
 	deleteQuiz,
 } from "../services/quizService";
+// import { emitEvent } from "../services/socket";
 
-import LiveQuizSection from "./LiveQuizSection";
+// import LiveQuizSection from "./LiveQuizSection";
 
 function MentorDashboard() {
 	const navigate = useNavigate();
@@ -154,9 +155,9 @@ function MentorDashboard() {
 						{/* Start this quiz button */}
 						<button
 							className="absolute left-8 top-8 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
-							onClick={() => console.log("Start this quiz clicked")}
+							onClick={() => navigate(`/mentor/live/${selectedQuiz.id}`)}
 						>
-							Start this quiz
+							Run this Quiz
 						</button>
 						{/* Edit this quiz button */}
 						<button
@@ -211,10 +212,6 @@ function MentorDashboard() {
 							<div>No questions found for this quiz.</div>
 						)}
 						{/* Live quiz section for real-time management */}
-						<LiveQuizSection
-							quizId={selectedQuiz.id}
-							mentorId={localStorage.getItem("currentMentorId")}
-						/>
 					</div>
 				) : null}
 			</div>
@@ -349,16 +346,28 @@ function MentorDashboard() {
 										{Math.round(quiz.duration / 60)} min
 									</span>
 								</div>
-								<button
-									className="absolute top-2 right-2 px-2 py-1 bg-gray-400 text-white text-xs rounded hover:bg-gray-600 transition z-20"
+								<span
+									role="button"
+									tabIndex={0}
+									className="absolute top-2 right-2 px-2 py-1 bg-gray-400 text-white text-xs rounded hover:bg-gray-600 transition z-20 cursor-pointer select-none"
 									onClick={(e) => {
 										e.stopPropagation();
 										handleDeleteQuiz(quiz.id);
 									}}
-									disabled={deletingQuizId === quiz.id}
+									onKeyDown={(e) => {
+										if (e.key === "Enter" || e.key === " ") {
+											e.stopPropagation();
+											handleDeleteQuiz(quiz.id);
+										}
+									}}
+									aria-disabled={deletingQuizId === quiz.id}
+									style={{
+										opacity: deletingQuizId === quiz.id ? 0.6 : 1,
+										pointerEvents: deletingQuizId === quiz.id ? "none" : "auto",
+									}}
 								>
 									{deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
-								</button>
+								</span>
 							</button>
 						))}
 					</div>

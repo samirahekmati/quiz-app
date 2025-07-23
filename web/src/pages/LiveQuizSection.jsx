@@ -14,8 +14,6 @@ function LiveQuizSection({ quizId, mentorId }) {
 	const [students, setStudents] = useState([]);
 	const [roomUsersError, setRoomUsersError] = useState("");
 	const [progress, setProgress] = useState({});
-	const [quizStarted, setQuizStarted] = useState(false);
-	const [quizEnded, setQuizEnded] = useState(false);
 	const [quizStatusMsg, setQuizStatusMsg] = useState("");
 	const [quizError, setQuizError] = useState("");
 	const [showQuizError, setShowQuizError] = useState(false);
@@ -60,8 +58,6 @@ function LiveQuizSection({ quizId, mentorId }) {
 		onEvent("progress-update", handleProgressUpdate);
 		// Listen for quiz-started event
 		const handleQuizStarted = (data) => {
-			setQuizStarted(true);
-			setQuizEnded(false);
 			setQuizStatusMsg(
 				"Quiz started at " +
 					(data?.startedAt
@@ -71,8 +67,6 @@ function LiveQuizSection({ quizId, mentorId }) {
 		};
 		// Listen for quiz-ended event
 		const handleQuizEnded = (data) => {
-			setQuizStarted(false);
-			setQuizEnded(true);
 			setQuizStatusMsg(
 				"Quiz ended at " +
 					(data?.endedAt ? new Date(data.endedAt).toLocaleTimeString() : "now"),
@@ -123,45 +117,14 @@ function LiveQuizSection({ quizId, mentorId }) {
 			)}
 			{/* Quiz control buttons */}
 			<div className="mb-4 flex gap-2">
-				{!quizStarted && !quizEnded && (
-					<button
-						className="px-3 py-1 bg-green-600 text-white rounded text-sm"
-						onClick={() => {
-							emitEvent("quiz-started", {
-								quizId,
-								startedAt: new Date().toISOString(),
-								duration: 60 * 5, // 5 minutes default, can be improved
-							});
-						}}
-					>
-						Start Quiz
-					</button>
-				)}
-				{quizStarted && !quizEnded && (
-					<button
-						className="px-3 py-1 bg-red-600 text-white rounded text-sm"
-						onClick={() => {
-							emitEvent("quiz-ended", {
-								quizId,
-								endedAt: new Date().toISOString(),
-							});
-						}}
-					>
-						End Quiz
-					</button>
-				)}
+				{/* Start/End Quiz buttons removed; now handled by parent */}
 			</div>
 			{/* Students in Room */}
 			<div className="font-semibold mb-2">Students in Room</div>
 			{roomUsersError && (
 				<div className="text-red-600 text-sm mb-2">{roomUsersError}</div>
 			)}
-			<button
-				className="mb-2 px-2 py-1 bg-blue-500 text-white rounded text-xs"
-				onClick={() => emitEvent("get-room-users", { quizId })}
-			>
-				Refresh
-			</button>
+			{/* Refresh button removed; updates are real-time via socket.io */}
 			{students.length === 0 ? (
 				<div className="text-gray-500 text-sm">
 					No students in this room yet.
