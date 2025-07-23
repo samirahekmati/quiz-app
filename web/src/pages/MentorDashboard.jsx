@@ -8,6 +8,8 @@ import {
 	deleteQuiz,
 } from "../services/quizService";
 
+import LiveQuizSection from "./LiveQuizSection";
+
 function MentorDashboard() {
 	const navigate = useNavigate();
 
@@ -208,6 +210,11 @@ function MentorDashboard() {
 						) : (
 							<div>No questions found for this quiz.</div>
 						)}
+						{/* Live quiz section for real-time management */}
+						<LiveQuizSection
+							quizId={selectedQuiz.id}
+							mentorId={localStorage.getItem("currentMentorId")}
+						/>
 					</div>
 				) : null}
 			</div>
