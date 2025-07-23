@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import db from "../db.js";
+import db, { pool } from "../db.js";
 import logger from "../utils/logger.js";
 
 // Define the schema for quiz creation
@@ -164,4 +164,66 @@ export async function deleteQuiz(req, res) {
 export const updateQuizSchema = z.object({
 	title: z.string().min(1, "Title is required").optional(),
 	description: z.string().min(1, "Description is required").optional(),
+	duration: z.number().min(1, "Duration must be a positive number").optional,
 });
+
+export async function updateQuiz(req, res) {
+	const { quizId } = req.params;
+	const { title, description, duration } = req.body;
+
+	if (!quizId || isNaN(Number(quizId))) {
+		return res
+			.status(400)
+			.json({ message: "Valid quizId is required in the URL." });
+	}
+
+	const client = await pool.connect();
+
+	try {
+		// Fetch existing quiz data
+		const existingResult = await client.query(
+			"SELECT * FROM quizzes WHERE id = $1",
+			[quizId],
+		);
+
+		if (existingResult.rowCount === 0) {
+			return res.status(404).json({ message: "Quiz not found" });
+		}
+
+		const existingQuiz = existingResult.rows[0];
+
+		// Use existing values if no new values provided
+		const updatedTitle = title !== undefined ? title : existingQuiz.title;
+		const updatedDescription =
+			description !== undefined ? description : existingQuiz.description;
+		const updatedDuration =
+			duration !== undefined ? duration : existingQuiz.duration;
+
+		// Validate required fields after merge
+		if (!updatedTitle || updatedTitle.trim() === "") {
+			return res.status(400).json({ message: "Title cannot be empty." });
+		}
+		if (
+			updatedDuration === null ||
+			updatedDuration === undefined ||
+			isNaN(Number(updatedDuration))
+		) {
+			return res
+				.status(400)
+				.json({ message: "Duration must be a valid number." });
+		}
+
+		// Update quiz record
+		await client.query(
+			`UPDATE quizzes SET title = $1, description = $2, duration = $3 WHERE id = $4`,
+			[updatedTitle, updatedDescription, updatedDuration, quizId],
+		);
+
+		res.status(200).json({ message: "Quiz updated successfully" });
+	} catch (error) {
+		logger.error("Error updating quiz:", error);
+		res.status(500).json({ message: "Internal server error" });
+	} finally {
+		client.release();
+	}
+}
