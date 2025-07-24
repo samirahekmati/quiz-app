@@ -2,11 +2,20 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import { updateQuiz } from "../services/quizService";
 
 function QuizEdit() {
 	const { quizId } = useParams();
 	const navigate = useNavigate();
 
+	// State variables for quiz info
+	const [quizTitle, setQuizTitle] = useState("");
+	const [quizDescription, setQuizDescription] = useState("");
+	const [quizDuration, setQuizDuration] = useState(0);
+	const [saving, setSaving] = useState(false);
+	const [saveMsg, setSaveMsg] = useState("");
+
+	// State variables for questions
 	const [questions, setQuestions] = useState([]);
 	const [questionText, setQuestionText] = useState("");
 	const [questionType, setQuestionType] = useState("multiple-choice");
@@ -18,6 +27,42 @@ function QuizEdit() {
 	const [editingQuestionId, setEditingQuestionId] = useState(null);
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
+
+	// Add a derived state for minutes
+	const [quizDurationMinutes, setQuizDurationMinutes] = useState(
+		Math.round((quizDuration || 0) / 60),
+	);
+
+	// Sync minutes when quizDuration changes (e.g., after fetch)
+	useEffect(() => {
+		setQuizDurationMinutes(Math.round((quizDuration || 0) / 60));
+	}, [quizDuration]);
+
+	// Update quizDuration (in seconds) when minutes input changes
+	const handleDurationMinutesChange = (e) => {
+		const minutes = Number(e.target.value);
+		setQuizDurationMinutes(minutes);
+		setQuizDuration(minutes * 60);
+	};
+
+	// Add this handler inside the component
+	const handleQuizUpdate = async (e) => {
+		e.preventDefault();
+		setSaving(true);
+		setSaveMsg("");
+		try {
+			const token = localStorage.getItem("token");
+			await updateQuiz(token, quizId, {
+				title: quizTitle,
+				description: quizDescription,
+				duration: quizDuration,
+			});
+			setSaveMsg("Quiz updated successfully!");
+		} catch {
+			setSaveMsg("Failed to update quiz.");
+		}
+		setSaving(false);
+	};
 
 	// Fetch quiz and questions from API
 	useEffect(() => {
@@ -32,6 +77,9 @@ function QuizEdit() {
 					setQuestions([]);
 				} else {
 					setQuestions(data.questions || []);
+					setQuizTitle(data.title || "");
+					setQuizDescription(data.description || "");
+					setQuizDuration(data.duration || 0);
 				}
 			} catch {
 				setError("Network error. Please try again.");
@@ -202,125 +250,199 @@ function QuizEdit() {
 
 	return (
 		<div className="p-8 max-w-2xl mx-auto bg-purple-100 rounded-2xl shadow-lg border-t-4 border-purple-500">
-			<h1 className="text-2xl font-bold mb-4 text-purple-800">Edit Quiz</h1>
+			{/* Quiz Edit Section */}
+			<h1 className="text-2xl font-bold mb-6 text-purple-800">Edit Quiz</h1>
 			{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
 			{loading && (
 				<div className="text-purple-500 text-sm mb-2">Loading quiz...</div>
 			)}
-			{/* Add Question Form */}
-			<form
-				onSubmit={handleAddQuestion}
-				className="mb-8 space-y-4 bg-white p-6 rounded-xl shadow border border-purple-200"
-			>
-				<div>
-					<label
-						htmlFor="question-text"
-						className="block font-medium mb-1 text-purple-700"
-					>
-						Question Text
-					</label>
-					<textarea
-						id="question-text"
-						className="border rounded px-2 py-1 w-full min-h-[60px] focus:outline-none focus:ring-2 focus:ring-purple-400"
-						value={questionText}
-						onChange={(e) => setQuestionText(e.target.value)}
-						required
-					/>
-				</div>
-				<div>
-					<label
-						htmlFor="question-type"
-						className="block font-medium mb-1 text-purple-700"
-					>
-						Type
-					</label>
-					<select
-						id="question-type"
-						className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-						value={questionType}
-						onChange={(e) => setQuestionType(e.target.value)}
-					>
-						<option value="multiple-choice">Multiple Choice</option>
-						<option value="text">Text</option>
-					</select>
-				</div>
-				{/* If type is text, show correct answer input */}
-				{questionType === "text" && (
-					<div>
-						<label
-							htmlFor="correct-answer"
-							className="block font-medium mb-1 text-purple-700"
-						>
-							Correct Answer
+			{/* Quiz Edit Form */}
+			<section className="mb-10">
+				<form
+					onSubmit={handleQuizUpdate}
+					className="p-6 bg-white rounded-xl shadow border border-purple-200"
+				>
+					<h2 className="text-lg font-semibold mb-4 text-purple-700">
+						Quiz Details
+					</h2>
+					<div className="mb-4">
+						<label htmlFor="quiz-title" className="block mb-1 text-purple-700">
+							Title
 						</label>
 						<input
-							id="correct-answer"
-							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-							value={correctAnswer}
-							onChange={(e) => setCorrectAnswer(e.target.value)}
+							id="quiz-title"
+							value={quizTitle}
+							onChange={(e) => setQuizTitle(e.target.value)}
+							className="w-full p-2 border rounded"
 							required
 						/>
 					</div>
-				)}
-				{/* If type is multiple-choice, show dynamic option fields */}
-				{questionType === "multiple-choice" && (
-					<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
-						<div className="font-medium mb-2 text-purple-700">Options</div>
-						<ul className="mb-2">
-							{optionFields.map((opt, idx) => (
-								<li key={idx} className="flex items-center gap-2 mb-1">
-									<span>{String.fromCharCode(65 + idx)}.</span>
-									<input
-										className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-										value={opt.text}
-										onChange={(e) =>
-											handleOptionChange(idx, "text", e.target.value)
-										}
-										placeholder={`Option ${idx + 1}`}
-										required
-									/>
-									<label className="flex items-center gap-1 text-purple-700">
-										<input
-											type="checkbox"
-											checked={opt.is_correct}
-											onChange={(e) =>
-												handleOptionChange(idx, "is_correct", e.target.checked)
-											}
-										/>
-										Correct
-									</label>
-								</li>
-							))}
-						</ul>
-						{/* Add Option button (max 4) */}
-						{optionFields.length < 4 && (
-							<button
-								className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 transition"
-								onClick={handleAddOptionField}
+					<div className="mb-4">
+						<label
+							htmlFor="quiz-description"
+							className="block mb-1 text-purple-700"
+						>
+							Description
+						</label>
+						<textarea
+							id="quiz-description"
+							value={quizDescription}
+							onChange={(e) => setQuizDescription(e.target.value)}
+							className="w-full p-2 border rounded"
+							required
+						/>
+					</div>
+					<div className="mb-4">
+						<label
+							htmlFor="quiz-duration"
+							className="block mb-1 text-purple-700"
+						>
+							Duration (minutes)
+						</label>
+						<input
+							id="quiz-duration"
+							type="number"
+							value={quizDurationMinutes}
+							onChange={handleDurationMinutesChange}
+							className="w-full p-2 border rounded"
+							required
+							min={1}
+						/>
+					</div>
+					<button
+						type="submit"
+						className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+						disabled={saving}
+					>
+						{saving ? "Saving..." : "Save"}
+					</button>
+					{saveMsg && <p className="mt-2 text-sm text-purple-700">{saveMsg}</p>}
+				</form>
+			</section>
+			{/* Question Form Section */}
+			<section>
+				<h2 className="text-lg font-semibold mb-4 text-purple-700">
+					Questions
+				</h2>
+				{/* Add Question Form */}
+				<form
+					onSubmit={handleAddQuestion}
+					className="mb-8 space-y-4 bg-white p-6 rounded-xl shadow border border-purple-200"
+				>
+					<div>
+						<label
+							htmlFor="question-text"
+							className="block font-medium mb-1 text-purple-700"
+						>
+							Question Text
+						</label>
+						<textarea
+							id="question-text"
+							className="border rounded px-2 py-1 w-full min-h-[60px] focus:outline-none focus:ring-2 focus:ring-purple-400"
+							value={questionText}
+							onChange={(e) => setQuestionText(e.target.value)}
+							required
+						/>
+					</div>
+					<div>
+						<label
+							htmlFor="question-type"
+							className="block font-medium mb-1 text-purple-700"
+						>
+							Type
+						</label>
+						<select
+							id="question-type"
+							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
+							value={questionType}
+							onChange={(e) => setQuestionType(e.target.value)}
+						>
+							<option value="multiple-choice">Multiple Choice</option>
+							<option value="text">Text</option>
+						</select>
+					</div>
+					{/* If type is text, show correct answer input */}
+					{questionType === "text" && (
+						<div>
+							<label
+								htmlFor="correct-answer"
+								className="block font-medium mb-1 text-purple-700"
 							>
-								Add Option
+								Correct Answer
+							</label>
+							<input
+								id="correct-answer"
+								className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
+								value={correctAnswer}
+								onChange={(e) => setCorrectAnswer(e.target.value)}
+								required
+							/>
+						</div>
+					)}
+					{/* If type is multiple-choice, show dynamic option fields */}
+					{questionType === "multiple-choice" && (
+						<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
+							<div className="font-medium mb-2 text-purple-700">Options</div>
+							<ul className="mb-2">
+								{optionFields.map((opt, idx) => (
+									<li key={idx} className="flex items-center gap-2 mb-1">
+										<span>{String.fromCharCode(65 + idx)}.</span>
+										<input
+											className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+											value={opt.text}
+											onChange={(e) =>
+												handleOptionChange(idx, "text", e.target.value)
+											}
+											placeholder={`Option ${idx + 1}`}
+											required
+										/>
+										<label className="flex items-center gap-1 text-purple-700">
+											<input
+												type="checkbox"
+												checked={opt.is_correct}
+												onChange={(e) =>
+													handleOptionChange(
+														idx,
+														"is_correct",
+														e.target.checked,
+													)
+												}
+											/>
+											Correct
+										</label>
+									</li>
+								))}
+							</ul>
+							{/* Add Option button (max 4) */}
+							{optionFields.length < 4 && (
+								<button
+									className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 transition"
+									onClick={handleAddOptionField}
+								>
+									Add Option
+								</button>
+							)}
+						</div>
+					)}
+					<div className="flex gap-2">
+						<button
+							type="submit"
+							className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+						>
+							{editingQuestionId ? "Save Changes" : "Save Question"}
+						</button>
+						{editingQuestionId && (
+							<button
+								type="button"
+								className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+								onClick={handleCancelEdit}
+							>
+								Cancel
 							</button>
 						)}
 					</div>
-				)}
-				<div className="flex gap-2">
-					<button
-						type="submit"
-						className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-					>
-						{editingQuestionId ? "Save Changes" : "Save Question"}
-					</button>
-					{editingQuestionId && (
-						<button
-							type="button"
-							className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-							onClick={handleCancelEdit}
-						>
-							Cancel
-						</button>
-					)}
-				</div>
-			</form>
+				</form>
+			</section>
 			{/* Render questions list from API */}
 			<div className="border p-4 rounded bg-purple-50 text-purple-700 text-center border-purple-200">
 				{questions.length === 0 ? (
