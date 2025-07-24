@@ -11,6 +11,23 @@ import logger from "../utils/logger.js";
 const quizTimers = {};
 
 export function setupSocketServer(io) {
+	// Emit timer-sync to all clients in each active quiz room every second
+	setInterval(() => {
+		Object.entries(quizTimers).forEach(([quizId, timer]) => {
+			if (timer.startedAt && !timer.endedAt) {
+				const elapsed = Math.floor(
+					(Date.now() - new Date(timer.startedAt).getTime()) / 1000,
+				);
+				const remaining = Math.max(0, timer.duration - elapsed);
+				io.to(quizId).emit("timer-sync", {
+					startedAt: timer.startedAt,
+					duration: remaining,
+					endedAt: timer.endedAt,
+				});
+			}
+		});
+	}, 1000);
+
 	// Socket.io middleware for JWT verification (mentor only)
 	io.use((socket, next) => {
 		const token = socket.handshake.auth?.token || socket.handshake.query?.token;
@@ -39,6 +56,21 @@ export function setupSocketServer(io) {
 		// Listen for client disconnect
 		socket.on("disconnect", (reason) => {
 			logger.info(`[socket.io] Client disconnected: ${socket.id} (${reason})`);
+
+			// Find all rooms this socket was in
+			const rooms = Array.from(socket.rooms).filter((r) => r !== socket.id);
+			rooms.forEach((quizId) => {
+				// Emit updated room-users to all clients in the room (real-time update)
+				io.in(quizId)
+					.fetchSockets()
+					.then((clients) => {
+						const users = clients.map((s) => ({
+							userId: s.handshake.auth?.userId || s.userId || "unknown",
+							role: s.handshake.auth?.role || s.role || "unknown",
+						}));
+						io.to(quizId).emit("room-users", { users });
+					});
+			});
 		});
 
 		/**
@@ -53,6 +85,7 @@ export function setupSocketServer(io) {
 		 * @param {Object} data - { quizId: string, userId: string, role: string }
 		 */
 		socket.on("join-room", (data) => {
+			logger.info(`[DEBUG] join-room event received:`, data);
 			const { quizId, userId, role } = data;
 			if (!quizId) {
 				socket.emit("error", { message: "quizId is required to join room" });
@@ -69,6 +102,17 @@ export function setupSocketServer(io) {
 			socket.to(quizId).emit("user-joined", { userId, role });
 			// Optionally, broadcast user-reconnected for reconnect scenarios
 			socket.to(quizId).emit("user-reconnected", { userId, role });
+
+			// Emit updated room-users to all clients in the room (real-time update)
+			io.in(quizId)
+				.fetchSockets()
+				.then((clients) => {
+					const users = clients.map((s) => ({
+						userId: s.handshake.auth?.userId || s.userId || "unknown",
+						role: s.handshake.auth?.role || s.role || "unknown",
+					}));
+					io.to(quizId).emit("room-users", { users });
+				});
 		});
 
 		/**
@@ -76,6 +120,7 @@ export function setupSocketServer(io) {
 		 * @param {Object} data - { quizId: string, startedAt: string (ISO), duration: number (seconds) }
 		 */
 		socket.on("quiz-started", (data) => {
+			logger.info(`[DEBUG] quiz-started event received:`, data);
 			const { quizId, startedAt, duration } = data;
 			if (!quizId || !startedAt || !duration) {
 				socket.emit("error", {
@@ -116,8 +161,15 @@ export function setupSocketServer(io) {
 		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string }
 		 */
 		socket.on("submit-answer", async (data) => {
+			logger.info("[DEBUG] submit-answer event received:", data);
 			const { quizId, userId, questionId, answer } = data;
 			if (!quizId || !userId || !questionId || !answer) {
+				logger.info("[DEBUG] submit-answer missing fields", {
+					quizId,
+					userId,
+					questionId,
+					answer,
+				});
 				socket.emit("error", {
 					message:
 						"quizId, userId, questionId, and answer are required to submit answer",
@@ -132,6 +184,7 @@ export function setupSocketServer(io) {
           RETURNING *;
         `;
 				const values = [userId, quizId, questionId, answer];
+				logger.info("[DEBUG] submit-answer DB values:", values);
 				const { rows } = await import("../db.js").then((m) =>
 					m.default.query(query, values),
 				);
@@ -191,6 +244,7 @@ export function setupSocketServer(io) {
 		 * Responds with { startedAt, duration, endedAt }
 		 */
 		socket.on("timer-sync", (data) => {
+			logger.info(`[DEBUG] timer-sync event received:`, data);
 			const { quizId } = data;
 			if (!quizId) {
 				socket.emit("error", { message: "quizId is required for timer sync" });
@@ -204,9 +258,19 @@ export function setupSocketServer(io) {
 					endedAt: null,
 				});
 			} else {
+				// Calculate remaining time
+				let remaining = null;
+				if (timer.startedAt && !timer.endedAt) {
+					const elapsed = Math.floor(
+						(Date.now() - new Date(timer.startedAt).getTime()) / 1000,
+					);
+					remaining = Math.max(0, timer.duration - elapsed);
+				} else if (timer.endedAt) {
+					remaining = 0;
+				}
 				socket.emit("timer-sync", {
 					startedAt: timer.startedAt,
-					duration: timer.duration,
+					duration: remaining,
 					endedAt: timer.endedAt,
 				});
 			}
