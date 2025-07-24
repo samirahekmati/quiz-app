@@ -179,6 +179,27 @@ function QuizEdit() {
 		navigate("/mentor/dashboard");
 	};
 
+	// Delete a question by ID
+	const handleDeleteQuestion = async (questionId) => {
+		if (!window.confirm("Are you sure you want to delete this question?"))
+			return;
+		try {
+			const res = await fetch(
+				`${getApiBaseUrl()}/quizzes/${quizId}/questions/${questionId}`,
+				{
+					method: "DELETE",
+				},
+			);
+			if (!res.ok) {
+				alert("Failed to delete question.");
+				return;
+			}
+			setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+		} catch {
+			alert("Network error. Please try again.");
+		}
+	};
+
 	return (
 		<div className="p-8 max-w-2xl mx-auto bg-purple-100 rounded-2xl shadow-lg border-t-4 border-purple-500">
 			<h1 className="text-2xl font-bold mb-4 text-purple-800">Edit Quiz</h1>
@@ -333,12 +354,7 @@ function QuizEdit() {
 										<button
 											type="button"
 											className="px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-600 text-sm transition"
-											onClick={() => {
-												// TODO: Call API to delete question by q.id
-												//
-												// fetch(`${getApiBaseUrl()}/quizzes/${quizId}/questions/${q.id}`, { method: 'DELETE' })
-												//   .then(() => setQuestions(questions.filter(qq => qq.id !== q.id));
-											}}
+											onClick={() => handleDeleteQuestion(q.id)}
 										>
 											Delete
 										</button>
