@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
@@ -13,7 +13,7 @@ function MentorLiveQuiz() {
 	const [quizStarted, setQuizStarted] = useState(false);
 	const [forceEndEnabled, setForceEndEnabled] = useState(false);
 	const [timer, setTimer] = useState(null); // seconds left
-	const timerInterval = useRef(null);
+	// const timerInterval = useRef(null);
 	const [duration, setDuration] = useState(600); // fallback duration
 
 	// Fetch quiz detail for real duration
@@ -44,35 +44,6 @@ function MentorLiveQuiz() {
 		};
 	}, [quizId, mentorId]);
 
-	// Timer sync logic
-	useEffect(() => {
-		function handleTimerSync(data) {
-			if (data && typeof data.duration === "number") {
-				setTimer(data.duration);
-			}
-		}
-		onEvent("timer-sync", handleTimerSync);
-		return () => {
-			offEvent("timer-sync", handleTimerSync);
-		};
-	}, []);
-
-	// Poll timer from backend every second when quiz is started
-	useEffect(() => {
-		if (!quizStarted) {
-			setTimer(null);
-			if (timerInterval.current) clearInterval(timerInterval.current);
-			return;
-		}
-		emitEvent("timer-sync", { quizId }); // initial fetch
-		timerInterval.current = setInterval(() => {
-			emitEvent("timer-sync", { quizId });
-		}, 1000);
-		return () => {
-			if (timerInterval.current) clearInterval(timerInterval.current);
-		};
-	}, [quizStarted, quizId]);
-
 	const handleStartQuiz = () => {
 		emitEvent("quiz-started", {
 			quizId,
@@ -80,9 +51,27 @@ function MentorLiveQuiz() {
 			duration, // use real duration!
 		});
 		setQuizStarted(true);
+		setTimer(duration);
 		setForceEndEnabled(true);
 		console.log("Mentor started quiz", { quizId, duration });
 	};
+
+	// Timer sync logic
+	useEffect(() => {
+		function handleTimerSync(data) {
+			if (data && typeof data.duration === "number") {
+				setTimer(data.duration);
+				if (data.startedAt && !data.endedAt) setQuizStarted(true);
+				if (data.endedAt) setQuizStarted(false);
+			}
+		}
+		onEvent("timer-sync", handleTimerSync);
+		// Emit timer-sync on mount (for refresh)
+		emitEvent("timer-sync", { quizId });
+		return () => {
+			offEvent("timer-sync", handleTimerSync);
+		};
+	}, [quizId]);
 
 	const handleForceEnd = () => {
 		emitEvent("quiz-ended", {

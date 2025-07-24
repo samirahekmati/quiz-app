@@ -121,15 +121,6 @@ function StudentQuiz() {
 		};
 	}, [quizId, navigate]);
 
-	// Timer countdown effect (client-side, for UI only; real value comes from server)
-	useEffect(() => {
-		if (!quizStarted || timer === null || timer <= 0) return;
-		const interval = setInterval(() => {
-			setTimer((prev) => (prev > 0 ? prev - 1 : 0));
-		}, 1000);
-		return () => clearInterval(interval);
-	}, [quizStarted, timer]);
-
 	if (loading) {
 		return <div className="p-4 text-center">Loading quiz...</div>;
 	}
