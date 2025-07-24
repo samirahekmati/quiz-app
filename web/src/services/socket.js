@@ -29,7 +29,7 @@ export function registerReconnectHandler(handler) {
  */
 export function connectSocket({ token, userId, role }) {
 	if (socket) return socket;
-	socket = io(import.meta.env.VITE_API_URL || "http://localhost:3000", {
+	socket = io(import.meta.env.VITE_SOCKET_URL || "http://localhost:3000", {
 		auth: token ? { token } : { userId, role: role || "student" },
 		autoConnect: true,
 		transports: ["websocket"],

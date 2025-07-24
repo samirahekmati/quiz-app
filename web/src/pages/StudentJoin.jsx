@@ -34,6 +34,8 @@ function StudentJoin() {
 			connectSocket({ userId: username, role: "student" });
 			// Set student username in cookie for backend identification (MVP)
 			document.cookie = `username=${encodeURIComponent(username)}; path=/; max-age=86400`;
+			// Also save username in localStorage for StudentQuiz.jsx
+			localStorage.setItem("studentUsername", username);
 			// Emit join-room event
 			emitEvent("join-room", { quizId, userId: username, role: "student" });
 			// Listen for room-joined

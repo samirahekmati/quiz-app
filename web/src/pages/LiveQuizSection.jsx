@@ -26,6 +26,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 		emitEvent("get-room-users", { quizId });
 		// Listen for room-users event
 		const handleRoomUsers = (data) => {
+			console.log("[LiveQuizSection] room-users event:", data);
 			if (data && Array.isArray(data.users)) {
 				setStudents(data.users.filter((u) => u.role === "student"));
 				setRoomUsersError("");
@@ -40,6 +41,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 		onEvent("error", handleRoomUsersError);
 		// Listen for progress-update event (live student answers)
 		const handleProgressUpdate = (data) => {
+			console.log("[LiveQuizSection] progress-update event:", data);
 			if (!data || !data.userId || !data.questionId) return;
 			setProgress((prev) => {
 				const userProgress = prev[data.userId] || {};
@@ -154,7 +156,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 							</tr>
 						</thead>
 						<tbody>
-							{students.map((s) =>
+							{students.map((s, idx) =>
 								progress[s.userId] ? (
 									Object.entries(progress[s.userId]).map(([qId, p]) => (
 										<tr key={s.userId + qId}>
@@ -169,7 +171,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 										</tr>
 									))
 								) : (
-									<tr key={s.userId + "-none"}>
+									<tr key={s.userId + "-none-" + idx}>
 										<td className="border px-2 py-1">{s.userId}</td>
 										<td className="border px-2 py-1" colSpan={3}>
 											No answers yet

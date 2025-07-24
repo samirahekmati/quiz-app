@@ -177,6 +177,13 @@ function StudentQuiz() {
 		setAnswers(newAnswers);
 		setSelectedOptions([]);
 		setTextAnswer("");
+		// Debug log for answer submission
+		console.log("submit-answer emit", {
+			quizId,
+			userId: localStorage.getItem("studentUsername") || "",
+			questionId: question.id,
+			answer: newAnswers[question.id],
+		});
 		// Emit answer via socket.io
 		emitEvent("submit-answer", {
 			quizId,
