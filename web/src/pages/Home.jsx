@@ -1,40 +1,22 @@
-import { Link } from "react-router-dom";
+import mentoroLogo from "../assets/mentoro-white-logo.png";
+import quizIllustration from "../assets/quiz-illustration.png";
 
-// Landing page for the quiz app (MVP ONLY)
-// In production, you can improve the design and add branding/logo
-function Home() {
+export default function Home() {
 	return (
-		<main className="min-h-screen flex flex-col items-center justify-center bg-gray-50">
-			<div className="max-w-md w-full p-8 bg-white rounded shadow text-center">
-				<h1 className="text-3xl font-bold mb-6">Welcome to Mentoro</h1>
-				<p className="mb-8 text-gray-600">
-					Please select your role to continue:
+		<div className="min-h-screen flex flex-col md:flex-row items-center justify-center bg-gradient-to-b from-purple-600 to-purple-900">
+			{/* Left section: logo/branding/illustration */}
+			<div className="flex-1 flex flex-col items-center justify-center p-8">
+				<img src={mentoroLogo} alt="Mentoro Logo" className="w-96 mb-8" />
+				<p className="text-white text-lg mb-8 text-center max-w-xs">
+					We believe learning is best with guidance. Join as a mentor or
+					student, take quizzes, and grow together in a supportive environment.
 				</p>
-				<div className="flex flex-col gap-4">
-					<Link
-						to="/mentor/signup"
-						className="btn-primary text-lg font-semibold"
-					>
-						Sign Up as a Mentor
-					</Link>
-					<br />
-					<Link
-						to="/mentor/login"
-						className="btn-primary text-lg font-semibold"
-					>
-						Log in as a Mentor
-					</Link>
-					<br />
-					<Link
-						to="/student/join"
-						className="btn-student text-lg font-semibold"
-					>
-						I am a Student
-					</Link>
-				</div>
+				<img src={quizIllustration} alt="Quiz Illustration" className="w-96" />
 			</div>
-		</main>
+			{/* Right section: card will go here */}
+			<div className="flex-1 flex items-center justify-center p-8">
+				{/* TODO: Add card here */}
+			</div>
+		</div>
 	);
 }
-
-export default Home;
