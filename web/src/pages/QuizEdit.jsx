@@ -146,9 +146,9 @@ function QuizEdit() {
 
 	const handleEditQuestion = (q) => {
 		setQuestionText(q.text);
-		setQuestionType(q.type);
+		setQuestionType(q.type === "multiple_choice" ? "multiple-choice" : q.type);
 		setCorrectAnswer(q.correct_answer || "");
-		if (q.type === "multiple-choice") {
+		if (q.type === "multiple_choice") {
 			setOptionFields(
 				q.options && q.options.length >= 2
 					? q.options.map((opt) => ({
