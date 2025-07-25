@@ -33,7 +33,7 @@ function QuizEdit() {
 		Math.round((quizDuration || 0) / 60),
 	);
 
-	// Sync minutes when quizDuration changes (e.g., after fetch)
+	// Sync minutes when quizDuration changes
 	useEffect(() => {
 		setQuizDurationMinutes(Math.round((quizDuration || 0) / 60));
 	}, [quizDuration]);
@@ -45,7 +45,6 @@ function QuizEdit() {
 		setQuizDuration(minutes * 60);
 	};
 
-	// Add this handler inside the component
 	const handleQuizUpdate = async (e) => {
 		e.preventDefault();
 		setSaving(true);
@@ -118,7 +117,6 @@ function QuizEdit() {
 		]);
 	};
 
-	// TODO: Add and update question via API
 	const handleAddQuestion = async (e) => {
 		e.preventDefault();
 		setError("");
