@@ -9,6 +9,7 @@ import {
 	getQuizById,
 	getQuizzesByUser,
 	deleteQuiz,
+	updateQuiz,
 } from "./quizController.js";
 
 const quizRouter = Router();
@@ -21,6 +22,8 @@ quizRouter.get("/mine", mentorAuthMiddleware, getQuizzesByUser); // Get api/quiz
 quizRouter.get("/:quizId", getQuizById); // Get api/quizzes/:quizId
 // Route to Delete quiz with id (questions and options)
 quizRouter.delete("/:quizId", deleteQuiz); // DELETE /api/quizzes/:quizId
+// Route to update quiz with id
+quizRouter.put("/:quizId", updateQuiz); // PUT /api/quizzes/:quizId
 // Mount questionRouter to handle all question-related routes for a specific quiz
 quizRouter.use("/:quizId/questions", questionRouter);
 // Mount answerRouter to handle all answer-related routes for a specific quiz
