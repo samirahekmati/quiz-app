@@ -9,7 +9,7 @@ import {
 	getQuizById,
 	getQuizzesByUser,
 	deleteQuiz,
-  updateQuiz
+	updateQuiz,
 } from "./quizController.js";
 
 const quizRouter = Router();

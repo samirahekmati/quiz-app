@@ -3,7 +3,6 @@ import { z, ZodError } from "zod";
 import { pool } from "../db.js";
 import logger from "../utils/logger.js";
 
-
 export const createQuestionSchema = z.object({
 	text: z.string().min(1, "Question text is required."),
 	type: z.enum(["multiple_choice", "true_false", "fill_in_blank"]).optional(),
@@ -256,11 +255,9 @@ export async function deleteQuestion(req, res) {
 
 		await client.query("COMMIT");
 
-		res
-			.status(200)
-			.json({
-				message: "Question and associated options deleted successfully",
-			});
+		res.status(200).json({
+			message: "Question and associated options deleted successfully",
+		});
 	} catch (error) {
 		await client.query("ROLLBACK");
 		logger.error("Error deleting question:", error?.message || error);
