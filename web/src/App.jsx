@@ -5,6 +5,7 @@ import "./App.css";
 import About from "./pages/About.jsx";
 import Home from "./pages/Home.jsx";
 import MentorDashboard from "./pages/MentorDashboard.jsx";
+import MentorLiveQuiz from "./pages/MentorLiveQuiz.jsx";
 import MentorLogin from "./pages/MentorLogin.jsx";
 import MentorSignup from "./pages/MentorSignup.jsx";
 import QuizEdit from "./pages/QuizEdit.jsx";
@@ -37,6 +38,14 @@ function App() {
 			/>
 			<Route path="/mentor/signup" element={<MentorSignup />} />
 			<Route path="/mentor/login" element={<MentorLogin />} />
+			<Route
+				path="/mentor/live/:quizId"
+				element={
+					<ProtectedRoute>
+						<MentorLiveQuiz />
+					</ProtectedRoute>
+				}
+			/>
 			{/* Student routes */}
 			<Route path="/student/join" element={<StudentJoin />} />
 			<Route path="/student/quiz/:quizId" element={<StudentQuiz />} />

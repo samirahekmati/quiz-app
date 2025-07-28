@@ -2,6 +2,13 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import {
+	connectSocket,
+	emitEvent,
+	onEvent,
+	offEvent,
+	registerReconnectHandler,
+} from "../services/socket";
 
 function StudentQuiz() {
 	const { quizId } = useParams();
@@ -9,10 +16,15 @@ function StudentQuiz() {
 	const [quiz, setQuiz] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	const [showError, setShowError] = useState(false);
 	const [current, setCurrent] = useState(0);
 	const [answers, setAnswers] = useState({});
 	const [textAnswer, setTextAnswer] = useState("");
 	const [selectedOptions, setSelectedOptions] = useState([]);
+	// Real-time timer state
+	const [timer, setTimer] = useState(null); // seconds left
+	const [quizStarted, setQuizStarted] = useState(false);
+	const [answerStatus, setAnswerStatus] = useState(""); // confirmation message
 
 	useEffect(() => {
 		async function fetchQuiz() {
@@ -37,12 +49,94 @@ function StudentQuiz() {
 		if (quizId) fetchQuiz();
 	}, [quizId]);
 
+	useEffect(() => {
+		// Connect socket if not already connected
+		connectSocket({
+			userId: localStorage.getItem("studentUsername") || "",
+			role: "student",
+		});
+
+		// Join quiz room (if not already joined)
+		emitEvent("join-room", {
+			quizId,
+			userId: localStorage.getItem("studentUsername") || "",
+			role: "student",
+		});
+
+		// Reconnect handling: on connect/reconnect, re-emit join-room and timer-sync
+		registerReconnectHandler(() => {
+			emitEvent("join-room", {
+				quizId,
+				userId: localStorage.getItem("studentUsername") || "",
+				role: "student",
+			});
+			emitEvent("timer-sync", { quizId });
+		});
+
+		// Listen for quiz-started event
+		const handleQuizStarted = (data) => {
+			setQuizStarted(true);
+			setTimer(data.duration);
+		};
+		onEvent("quiz-started", handleQuizStarted);
+
+		// Listen for quiz-ended event
+		const handleQuizEnded = () => {
+			setQuizStarted(false);
+			setTimer(0);
+			navigate(`/student/result/${quizId}`);
+		};
+		onEvent("quiz-ended", handleQuizEnded);
+
+		// Listen for timer-sync event
+		const handleTimerSync = (data) => {
+			if (data && typeof data.duration === "number") {
+				setTimer(data.duration);
+			}
+		};
+		onEvent("timer-sync", handleTimerSync);
+
+		// Listen for answer-received event
+		const handleAnswerReceived = () => {
+			setAnswerStatus("Answer submitted successfully!");
+			setTimeout(() => setAnswerStatus(""), 2000);
+		};
+		onEvent("answer-received", handleAnswerReceived);
+
+		// Listen for error event
+		const handleError = (err) => {
+			setError(err.message || "An error occurred.");
+			setShowError(true);
+			setTimeout(() => setShowError(false), 4000);
+		};
+		onEvent("error", handleError);
+
+		// Cleanup listeners on unmount
+		return () => {
+			offEvent("quiz-started", handleQuizStarted);
+			offEvent("quiz-ended", handleQuizEnded);
+			offEvent("timer-sync", handleTimerSync);
+			offEvent("answer-received", handleAnswerReceived);
+			offEvent("error", handleError);
+		};
+	}, [quizId, navigate]);
+
 	if (loading) {
 		return <div className="p-4 text-center">Loading quiz...</div>;
 	}
-	if (error) {
-		return <div className="p-4 text-center text-red-600">{error}</div>;
-	}
+	// Show error alert at the top (dismissable)
+	const errorAlert = showError && error && (
+		<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
+			<span>{error}</span>
+			<button
+				className="ml-4 text-red-700 font-bold px-2"
+				onClick={() => setShowError(false)}
+				aria-label="Dismiss error"
+			>
+				×
+			</button>
+		</div>
+	);
 	if (!quiz) {
 		return <div className="p-4 text-center text-red-600">Quiz not found.</div>;
 	}
@@ -56,7 +150,6 @@ function StudentQuiz() {
 		question.type === "multiple_choice" &&
 		question.options.filter((o) => o.is_correct).length > 1;
 
-	// TODO: Replace with API call to submit answer when backend endpoint is available
 	const handleNext = (e) => {
 		e.preventDefault();
 		let newAnswers = { ...answers };
@@ -75,35 +168,35 @@ function StudentQuiz() {
 		setAnswers(newAnswers);
 		setSelectedOptions([]);
 		setTextAnswer("");
+		// Debug log for answer submission
+		console.log("submit-answer emit", {
+			quizId,
+			userId: localStorage.getItem("studentUsername") || "",
+			questionId: question.id,
+			answer: newAnswers[question.id],
+		});
+		// Emit answer via socket.io
+		emitEvent("submit-answer", {
+			quizId,
+			userId: localStorage.getItem("studentUsername") || "",
+			questionId: question.id,
+			answer: newAnswers[question.id],
+		});
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
-			// TODO: POST /api/quizzes/:quizId/answers with { studentId, answers } when backend endpoint is available
-			//
-			// const studentId = localStorage.getItem("studentId");
-			// const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/answers`, {
-			//   method: "POST",
-			//   headers: { "Content-Type": "application/json" },
-			//   body: JSON.stringify({ studentId, answers: newAnswers }),
-			// });
-			// if (res.ok) {
-			//   navigate(`/student/result/${quizId}`);
-			// } else {
-			//   // handle error
-			// }
-			navigate(`/student/result/${quiz.id}`);
+			// Wait for quiz-ended event to navigate to result page
 		}
 	};
 
-	if (!quiz.isStarted) {
+	// Show waiting page if quiz not started
+	if (!quizStarted) {
 		return (
 			<div className="p-4 max-w-md mx-auto text-center">
+				{errorAlert}
 				<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
 				<div className="text-lg mb-2">
-					Waiting for the mentor to start the quiz. Please stay on this page...{" "}
-					<span role="img" aria-label="traffic light">
-						6a6
-					</span>
+					Waiting for the mentor to start the quiz. Please stay on this page...
 				</div>
 			</div>
 		);
@@ -111,7 +204,14 @@ function StudentQuiz() {
 
 	return (
 		<div className="p-4 max-w-md mx-auto">
+			{errorAlert}
 			<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
+			<div className="mb-2 text-right font-mono">
+				Time left: {timer !== null ? timer : "-"}s
+			</div>
+			{answerStatus && (
+				<div className="text-green-600 text-sm mb-2">{answerStatus}</div>
+			)}
 			<form onSubmit={handleNext} className="space-y-4 border p-4 rounded">
 				<div>
 					<div className="font-medium mb-2">

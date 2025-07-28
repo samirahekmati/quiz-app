@@ -1,12 +1,20 @@
 import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import {
+	connectSocket,
+	emitEvent,
+	onEvent,
+	offEvent,
+} from "../services/socket";
 
 function StudentJoin() {
 	const [username, setUsername] = useState("");
 	const [quizId, setQuizId] = useState("");
 	const [error, setError] = useState("");
+	const [showError, setShowError] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
 
@@ -22,30 +30,54 @@ function StudentJoin() {
 				setLoading(false);
 				return;
 			}
-			// TODO: POST /api/quizzes/:quizId/join with { username } and save studentId for later use
-			//
-			// const joinRes = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/join`, {
-			//   method: "POST",
-			//   headers: { "Content-Type": "application/json" },
-			//   body: JSON.stringify({ username }),
-			// });
-			// const joinData = await joinRes.json();
-			// if (joinRes.ok) {
-			//   localStorage.setItem("studentId", joinData.studentId);
-			//   navigate(`/student/quiz/${quizId}`);
-			// } else {
-			//   setError(joinData.message || "Failed to join quiz.");
-			// }
-			navigate(`/student/quiz/${quizId}`);
+			// Connect socket (student)
+			connectSocket({ userId: username, role: "student" });
+			// Set student username in cookie for backend identification (MVP)
+			document.cookie = `username=${encodeURIComponent(username)}; path=/; max-age=86400`;
+			// Also save username in localStorage for StudentQuiz.jsx
+			localStorage.setItem("studentUsername", username);
+			// Emit join-room event
+			emitEvent("join-room", { quizId, userId: username, role: "student" });
+			// Listen for room-joined
+			onEvent("room-joined", () => {
+				navigate(`/student/quiz/${quizId}`);
+			});
+			// Listen for error
+			onEvent("error", (err) =>
+				setError(err.message || "Failed to join quiz."),
+			);
 		} catch {
 			setError("Network error. Please try again.");
+			setShowError(true);
+			setTimeout(() => setShowError(false), 4000);
 		} finally {
 			setLoading(false);
 		}
 	};
 
+	// Cleanup listeners on unmount
+	useEffect(() => {
+		return () => {
+			offEvent("room-joined");
+			offEvent("error");
+		};
+	}, []);
+
 	return (
 		<div className="p-4 max-w-md mx-auto">
+			{/* Error alert at the top (dismissable) */}
+			{showError && error && (
+				<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
+					<span>{error}</span>
+					<button
+						className="ml-4 text-red-700 font-bold px-2"
+						onClick={() => setShowError(false)}
+						aria-label="Dismiss error"
+					>
+						×
+					</button>
+				</div>
+			)}
 			<h1 className="text-2xl font-bold mb-4">Join Quiz</h1>
 			<form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded">
 				<div>
@@ -89,7 +121,6 @@ function StudentJoin() {
 			>
 				Back to Home
 			</button>
-			{/* TODO: API integration for join quiz and username validation when backend endpoint is available */}
 		</div>
 	);
 }
