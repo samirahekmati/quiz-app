@@ -5,6 +5,7 @@
 
 import jwt from "jsonwebtoken";
 
+import { pool } from "../db.js";
 import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 // In-memory timer state for each quiz (quizId)
@@ -84,7 +85,7 @@ export function setupSocketServer(io) {
 		 * Client requests to join a quiz room
 		 * @param {Object} data - { quizId: string, userId: string, role: string }
 		 */
-		socket.on("join-room", (data) => {
+		socket.on("join-room", async (data) => {
 			logger.info(`[DEBUG] join-room event received:`, data);
 			const { quizId, userId, role } = data;
 			if (!quizId) {
@@ -98,6 +99,64 @@ export function setupSocketServer(io) {
 			);
 			// Confirm join to the client
 			socket.emit("room-joined", { quizId });
+
+			const timer = quizTimers[quizId];
+			if (timer && timer.startedAt) {
+				// If a timer exists and has started, sync the user.
+				const elapsed = Math.floor(
+					(Date.now() - new Date(timer.startedAt).getTime()) / 1000,
+				);
+				const remaining = Math.max(0, timer.duration - elapsed);
+
+				socket.emit("timer-sync", {
+					startedAt: timer.startedAt,
+					duration: remaining,
+					endedAt: timer.endedAt,
+				});
+				logger.info(
+					`[socket.io] Proactively synced reconnected user ${
+						userId || socket.id
+					} in room ${quizId}`,
+				);
+
+				// Progress Sync
+				try {
+					if (role === "mentor") {
+						const { rows: allAnswers } = await pool.query(
+							`SELECT * FROM answers WHERE quiz_id = $1 ORDER BY submitted_at ASC`,
+							[quizId],
+						);
+						if (allAnswers.length > 0) {
+							socket.emit("full-progress-update", { answers: allAnswers });
+							logger.info(
+								`[socket.io] Sent full progress (${allAnswers.length} answers) to reconnected mentor ${userId} in room ${quizId}`,
+							);
+						}
+					} else if (role === "student") {
+						const { rows: studentAnswers } = await pool.query(
+							`SELECT * FROM answers WHERE quiz_id = $1 AND username = $2 ORDER BY submitted_at ASC`,
+							[quizId, userId],
+						);
+						if (studentAnswers.length > 0) {
+							socket.emit("student-progress-update", {
+								answers: studentAnswers,
+							});
+							logger.info(
+								`[socket.io] Sent progress (${studentAnswers.length} answers) to reconnected student ${userId} in room ${quizId}`,
+							);
+						}
+					}
+				} catch (err) {
+					logger.error(
+						`[socket.io] Error fetching progress for user ${userId} in quiz ${quizId}:`,
+						err,
+					);
+					socket.emit("error", {
+						message: "Failed to retrieve your quiz progress.",
+					});
+				}
+			}
+
 			// Broadcast to all other clients in the room that a new user joined
 			socket.to(quizId).emit("user-joined", { userId, role });
 			// Optionally, broadcast user-reconnected for reconnect scenarios
@@ -185,9 +244,7 @@ export function setupSocketServer(io) {
         `;
 				const values = [userId, quizId, questionId, answer];
 				logger.info("[DEBUG] submit-answer DB values:", values);
-				const { rows } = await import("../db.js").then((m) =>
-					m.default.query(query, values),
-				);
+				const { rows } = await pool.query(query, values);
 				logger.info(
 					`[socket.io] Answer submitted by user ${userId} for quiz ${quizId}, question ${questionId}`,
 				);
