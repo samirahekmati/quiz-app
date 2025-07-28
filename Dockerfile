@@ -1,10 +1,11 @@
-FROM node:22-alpine AS web
+FROM node:22-slim AS web
 
 USER node
 WORKDIR /home/node
 
 COPY package*.json .npmrc ./
 COPY --chown=node web/package.json web/
+
 RUN npm \
   --no-fund \
   --include-workspace-root \
@@ -20,7 +21,6 @@ RUN apk add --no-cache tini
 
 USER node
 WORKDIR /home/node
-
 
 COPY package*.json .npmrc ./
 COPY api/package.json api/
