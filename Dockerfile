@@ -10,7 +10,8 @@ RUN npm \
   --no-fund \
   --include-workspace-root \
   --workspace web \
-  ci
+  ci && \
+  npm --workspace web install @rollup/rollup-linux-x64-gnu --no-save
 
 COPY --chown=node web/ web/
 RUN npm --workspace web run build
