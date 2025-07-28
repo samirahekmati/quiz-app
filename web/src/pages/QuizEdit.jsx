@@ -18,8 +18,7 @@ function QuizEdit() {
 	// State variables for questions
 	const [questions, setQuestions] = useState([]);
 	const [questionText, setQuestionText] = useState("");
-	const [questionType, setQuestionType] = useState("multiple-choice");
-	const [correctAnswer, setCorrectAnswer] = useState("");
+	const questionType = "multiple-choice";
 	const [optionFields, setOptionFields] = useState([
 		{ text: "", is_correct: false },
 		{ text: "", is_correct: false },
@@ -124,19 +123,14 @@ function QuizEdit() {
 			setError("Question text is required.");
 			return;
 		}
-		if (questionType === "multiple-choice") {
-			const validOptions = optionFields.filter((opt) => opt.text.trim());
-			if (validOptions.length < 2) {
-				setError("At least two options are required.");
-				return;
-			}
-			if (!validOptions.some((opt) => opt.is_correct)) {
-				setError("At least one correct option is required.");
-				return;
-			}
+
+		const validOptions = optionFields.filter((opt) => opt.text.trim());
+		if (validOptions.length < 2) {
+			setError("At least two options are required.");
+			return;
 		}
-		if (questionType === "text" && !correctAnswer.trim()) {
-			setError("Correct answer is required for text questions.");
+		if (!validOptions.some((opt) => opt.is_correct)) {
+			setError("At least one correct option is required.");
 			return;
 		}
 		setLoading(true);
@@ -145,21 +139,14 @@ function QuizEdit() {
 				? `${getApiBaseUrl()}/quizzes/${quizId}/questions/${editingQuestionId}`
 				: `${getApiBaseUrl()}/quizzes/${quizId}/questions`;
 			const method = editingQuestionId ? "PUT" : "POST";
-			const body =
-				questionType === "multiple-choice"
-					? {
-							text: questionText.trim(),
-							type: "multiple_choice",
-							options: optionFields.map((opt) => ({
-								text: opt.text.trim(),
-								is_correct: !!opt.is_correct,
-							})),
-						}
-					: {
-							text: questionText.trim(),
-							type: "fill_in_blank",
-							options: [{ text: correctAnswer.trim(), is_correct: true }],
-						};
+			const body = {
+				text: questionText.trim(),
+				type: "multiple_choice",
+				options: optionFields.map((opt) => ({
+					text: opt.text.trim(),
+					is_correct: !!opt.is_correct,
+				})),
+			};
 			const res = await fetch(url, {
 				method,
 				headers: { "Content-Type": "application/json" },
@@ -173,8 +160,6 @@ function QuizEdit() {
 			}
 			// Success: refresh questions from API
 			setQuestionText("");
-			setQuestionType("multiple-choice");
-			setCorrectAnswer("");
 			resetOptionFields();
 			setEditingQuestionId(null);
 			// Fetch updated questions
@@ -192,30 +177,23 @@ function QuizEdit() {
 
 	const handleEditQuestion = (q) => {
 		setQuestionText(q.text);
-		setQuestionType(q.type === "multiple_choice" ? "multiple-choice" : q.type);
-		setCorrectAnswer(q.correct_answer || "");
-		if (q.type === "multiple_choice") {
-			setOptionFields(
-				q.options && q.options.length >= 2
-					? q.options.map((opt) => ({
-							text: opt.text,
-							is_correct: opt.is_correct,
-						}))
-					: [
-							{ text: "", is_correct: false },
-							{ text: "", is_correct: false },
-						],
-			);
-		} else {
-			resetOptionFields();
-		}
+		setOptionFields(
+			q.options && q.options.length >= 2
+				? q.options.map((opt) => ({
+						text: opt.text,
+						is_correct: opt.is_correct,
+					}))
+				: [
+						{ text: "", is_correct: false },
+						{ text: "", is_correct: false },
+					],
+		);
+
 		setEditingQuestionId(q.id);
 	};
 
 	const handleCancelEdit = () => {
 		setQuestionText("");
-		setQuestionType("multiple-choice");
-		setCorrectAnswer("");
 		resetOptionFields();
 		setEditingQuestionId(null);
 	};
@@ -344,43 +322,15 @@ function QuizEdit() {
 					</div>
 					<div>
 						<label
-							htmlFor="question-type"
+							htmlFor="options"
 							className="block font-medium mb-1 text-purple-700"
 						>
-							Type
+							Options
 						</label>
-						<select
-							id="question-type"
-							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-							value={questionType}
-							onChange={(e) => setQuestionType(e.target.value)}
-						>
-							<option value="multiple-choice">Multiple Choice</option>
-							<option value="text">Text</option>
-						</select>
 					</div>
-					{/* If type is text, show correct answer input */}
-					{questionType === "text" && (
-						<div>
-							<label
-								htmlFor="correct-answer"
-								className="block font-medium mb-1 text-purple-700"
-							>
-								Correct Answer
-							</label>
-							<input
-								id="correct-answer"
-								className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-								value={correctAnswer}
-								onChange={(e) => setCorrectAnswer(e.target.value)}
-								required
-							/>
-						</div>
-					)}
-					{/* If type is multiple-choice, show dynamic option fields */}
+
 					{questionType === "multiple-choice" && (
 						<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
-							<div className="font-medium mb-2 text-purple-700">Options</div>
 							<ul className="mb-2">
 								{optionFields.map((opt, idx) => (
 									<li key={idx} className="flex items-center gap-2 mb-1">
