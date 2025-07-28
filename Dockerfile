@@ -11,7 +11,7 @@ RUN npm \
   --include-workspace-root \
   --workspace web \
   ci && \
-  npm --workspace web install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu --no-save
+  npm --workspace web install @rollup/rollup-linux-x64-gnu lightningcss-linux-x64-gnu @tailwindcss/oxide-linux-x64-gnu --no-save
 
 COPY --chown=node web/ web/
 RUN npm --workspace web run build
