@@ -249,7 +249,7 @@ function QuizEdit() {
 							id="quiz-title"
 							value={quizTitle}
 							onChange={(e) => setQuizTitle(e.target.value)}
-							className="w-full p-2 border rounded"
+							className="w-full p-2 border rounded bg-purple-50 border-purple-200"
 							required
 						/>
 					</div>
@@ -264,7 +264,7 @@ function QuizEdit() {
 							id="quiz-description"
 							value={quizDescription}
 							onChange={(e) => setQuizDescription(e.target.value)}
-							className="w-full p-2 border rounded"
+							className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
 							required
 						/>
 					</div>
@@ -280,7 +280,7 @@ function QuizEdit() {
 							type="number"
 							value={quizDurationMinutes}
 							onChange={handleDurationMinutesChange}
-							className="w-full p-2 border rounded"
+							className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
 							required
 							min={1}
 						/>
@@ -314,7 +314,7 @@ function QuizEdit() {
 						</label>
 						<textarea
 							id="question-text"
-							className="border rounded px-2 py-1 w-full min-h-[60px] focus:outline-none focus:ring-2 focus:ring-purple-400"
+							className="border rounded px-2 py-1 w-full min-h-[60px] bg-purple-50 border-purple-200"
 							value={questionText}
 							onChange={(e) => setQuestionText(e.target.value)}
 							required
