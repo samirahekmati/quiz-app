@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
+import mentoroLogo from "../assets/mentoro-white-logo.png";
+
 export default function Layout() {
 	const navigate = useNavigate();
 	const [activeSection, setActiveSection] = useState("quizzes");
@@ -77,7 +79,11 @@ export default function Layout() {
 			>
 				{/* Sidebar header */}
 				<div className="p-6 text-2xl font-bold border-b border-purple-300">
-					Welcome,
+					<img
+						src={mentoroLogo}
+						alt="Mentoro Logo"
+						className="w-48 mb-8 mt-8"
+					/>
 				</div>
 
 				{/* Navigation items */}
