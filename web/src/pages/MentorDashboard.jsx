@@ -106,6 +106,9 @@ function MentorDashboard() {
 		try {
 			await deleteQuiz(token, quizId);
 			setQuizzes((prev) => prev.filter((q) => q.id !== quizId));
+
+			setSelectedQuiz(null);
+			setQuizDetail(null);
 		} catch (err) {
 			alert(err.message || "Failed to delete quiz.");
 		} finally {
@@ -154,18 +157,29 @@ function MentorDashboard() {
 					<div className="bg-purple-100 p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 relative">
 						{/* Start this quiz button */}
 						<button
-							className="absolute left-8 top-8 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+							className="absolute left-8 top-8 px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-700 transition font-semibold"
 							onClick={() => navigate(`/mentor/live/${selectedQuiz.id}`)}
 						>
 							Run this Quiz
 						</button>
-						{/* Edit this quiz button */}
-						<button
-							className="absolute right-8 top-8 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
-							onClick={() => navigate(`/mentor/quiz/${quizDetail.id}/edit`)}
-						>
-							Edit this quiz
-						</button>
+						{/* Edit this quiz button + Delete (container) */}
+						<div className="absolute right-8 top-8 flex items-center space-x-4">
+							<button
+								className="px-4 py-2 bg-red-500 text-white rounded shadow hover:bg-red-700 transition font-semibold"
+								onClick={() => handleDeleteQuiz(quizDetail.id)}
+								disabled={deletingQuizId === quizDetail.id}
+							>
+								{deletingQuizId === quizDetail.id
+									? "Deleting..."
+									: "Delete Quiz"}
+							</button>
+							<button
+								className="px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+								onClick={() => navigate(`/mentor/quiz/${quizDetail.id}/edit`)}
+							>
+								Edit this quiz
+							</button>
+						</div>
 						<h2 className="text-2xl font-bold mb-2 text-purple-800 mt-16">
 							{quizDetail.title}
 						</h2>
@@ -346,28 +360,6 @@ function MentorDashboard() {
 										{Math.round(quiz.duration / 60)} min
 									</span>
 								</div>
-								<span
-									role="button"
-									tabIndex={0}
-									className="absolute top-2 right-2 px-2 py-1 bg-gray-400 text-white text-xs rounded hover:bg-gray-600 transition z-20 cursor-pointer select-none"
-									onClick={(e) => {
-										e.stopPropagation();
-										handleDeleteQuiz(quiz.id);
-									}}
-									onKeyDown={(e) => {
-										if (e.key === "Enter" || e.key === " ") {
-											e.stopPropagation();
-											handleDeleteQuiz(quiz.id);
-										}
-									}}
-									aria-disabled={deletingQuizId === quiz.id}
-									style={{
-										opacity: deletingQuizId === quiz.id ? 0.6 : 1,
-										pointerEvents: deletingQuizId === quiz.id ? "none" : "auto",
-									}}
-								>
-									{deletingQuizId === quiz.id ? "Deleting..." : "Delete"}
-								</span>
 							</button>
 						))}
 					</div>
