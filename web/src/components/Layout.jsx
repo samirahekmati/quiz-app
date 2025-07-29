@@ -5,14 +5,15 @@ import mentoroLogo from "../assets/mentoro-white-logo.png";
 
 export default function Layout() {
 	const navigate = useNavigate();
+	// "Quizzes" is the default active section when the page loads
 	const [activeSection, setActiveSection] = useState("quizzes");
 	const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
 	// Sidebar links
 	const navLinks = [
+		{ label: "Profile", section: "profile", path: "/mentor/profile" },
 		{ label: "Quizzes", section: "quizzes", path: "/mentor/dashboard" },
 		{ label: "Create New Quiz", section: "create", path: "/mentor/create" },
-		{ label: "Profile", section: "profile", path: "/mentor/profile" },
 		{ label: "See Quiz Results", section: "results", path: "/mentor/results" },
 	];
 
@@ -126,7 +127,7 @@ export default function Layout() {
 			</aside>
 
 			{/* Main Content */}
-			<main className="flex-1 p-8 lg:ml-0">
+			<main className="flex-1 p-8 pt-24 lg:ml-0">
 				<Outlet />
 			</main>
 		</div>
