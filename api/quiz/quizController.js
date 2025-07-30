@@ -284,3 +284,59 @@ export async function updateQuiz(req, res) {
 		client.release();
 	}
 }
+
+// get all students who have taken a quiz with detailed reports
+// Route: GET /api/quizzes/:quizId/students
+export async function getQuizStudents(req, res) {
+	const { quizId } = req.params;
+
+	try {
+		// Get detailed question/answer breakdown
+		const detailsResult = await db.query(
+			`
+			SELECT 
+				a.username,
+				q.text as question_text,
+				a.selected_option as student_answer,
+				o.is_correct,
+				a.submitted_at
+			FROM answers a
+			JOIN questions q ON a.question_id = q.id
+			JOIN options o ON a.question_id = o.question_id AND a.selected_option = o.id::text
+			WHERE a.quiz_id = $1
+			ORDER BY a.username, a.question_id
+		`,
+			[quizId],
+		);
+
+		// Get summary counts for each student
+		const summaryResult = await db.query(
+			`
+			SELECT 
+				a.username,
+				COUNT(CASE WHEN o.is_correct THEN 1 END) as correct_answers,
+				COUNT(CASE WHEN o.is_correct = false THEN 1 END) as incorrect_answers,
+				COUNT(*) as total_answers
+			FROM answers a
+			JOIN options o ON a.question_id = o.question_id AND a.selected_option = o.id::text
+			WHERE a.quiz_id = $1
+			GROUP BY a.username
+			ORDER BY a.username
+		`,
+			[quizId],
+		);
+
+		// Combine the data
+		const response = {
+			summary: summaryResult.rows,
+			details: detailsResult.rows,
+		};
+
+		res.json(response);
+	} catch (error) {
+		logger.error("Error fetching quiz students:", error);
+		res
+			.status(500)
+			.json({ message: "Server error while fetching quiz students" });
+	}
+}
