@@ -10,6 +10,8 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 // In-memory timer state for each quiz (quizId)
 const quizTimers = {};
+// In-memory store for active quiz sessions (quizId)
+const liveQuizzes = {};
 
 export function setupSocketServer(io) {
 	// Emit timer-sync to all clients in each active quiz room every second
@@ -54,6 +56,28 @@ export function setupSocketServer(io) {
 	io.on("connection", (socket) => {
 		logger.info(`[socket.io] Client connected: ${socket.id}`);
 
+		// Listen for mentor-runs-quiz event from mentor client
+		socket.on("mentor-runs-quiz", (data) => {
+			const { quizId } = data;
+			if (socket.role !== "mentor") {
+				return socket.emit("error", {
+					message: "Only mentors can run a quiz.",
+				});
+			}
+			if (!quizId) {
+				return socket.emit("error", { message: "quizId is required." });
+			}
+			liveQuizzes[quizId] = {
+				status: "waiting", // 'waiting', 'started', 'ended'
+				mentorSocketId: socket.id,
+			};
+			logger.info(
+				`[socket.io] Quiz session created for quizId: ${quizId} by mentor ${socket.id}`,
+			);
+			socket.emit("quiz-session-created", { quizId });
+		});
+
+
 		// Listen for client disconnect
 		socket.on("disconnect", (reason) => {
 			logger.info(`[socket.io] Client disconnected: ${socket.id} (${reason})`);
@@ -88,6 +112,44 @@ export function setupSocketServer(io) {
 		socket.on("join-room", async (data) => {
 			logger.info(`[DEBUG] join-room event received:`, data);
 			const { quizId, userId, role } = data;
+
+			// Quiz Gatekeeper
+			const session = liveQuizzes[quizId];
+			if (role === "student") {
+				if (!session) {
+					return socket.emit("error", {
+						message: "This quiz is not live yet. Please wait for the mentor.",
+					});
+				}
+				if (session.status === "ended") {
+					// Check if student participated to allow viewing results
+					try {
+						const db = (await import("../db.js")).default;
+						const { rowCount } = await db.query(
+							`SELECT id FROM answers WHERE quiz_id = $1 AND username = $2 LIMIT 1`,
+							[quizId, userId],
+						);
+						if (rowCount > 0) {
+							// Student participated, allow them to see results
+							return socket.emit("quiz-has-ended");
+						}
+						// Student did not participate
+						return socket.emit("error", {
+							message:
+								"This quiz has ended and you did not participate in it.",
+						});
+					} catch (err) {
+						logger.error(
+							`[socket.io] DB error checking participation for user ${userId} in quiz ${quizId}:`,
+							err,
+						);
+						return socket.emit("error", {
+							message: "Error verifying your participation.",
+						});
+					}
+				}
+			}
+
 			if (!quizId) {
 				socket.emit("error", { message: "quizId is required to join room" });
 				return;
@@ -187,6 +249,10 @@ export function setupSocketServer(io) {
 				});
 				return;
 			}
+			// Update session status
+			if (liveQuizzes[quizId]) {
+				liveQuizzes[quizId].status = "started";
+			}
 			// If timer already exists for this quiz, clear it (prevent duplicate)
 			if (quizTimers[quizId]?.timeout) {
 				clearTimeout(quizTimers[quizId].timeout);
@@ -204,6 +270,10 @@ export function setupSocketServer(io) {
 						`[socket.io] Quiz auto-ended in room: ${quizId} (endedAt: ${endedAt})`,
 					);
 					quizTimers[quizId].endedAt = endedAt;
+					// Update session status
+					if (liveQuizzes[quizId]) {
+						liveQuizzes[quizId].status = "ended";
+					}
 				}, duration * 1000),
 			};
 			// Broadcast to all clients in the room that the quiz has started
@@ -287,6 +357,10 @@ export function setupSocketServer(io) {
 			if (quizTimers[quizId]?.timeout) {
 				clearTimeout(quizTimers[quizId].timeout);
 				quizTimers[quizId].endedAt = endedAt;
+			}
+			// Update session status
+			if (liveQuizzes[quizId]) {
+				liveQuizzes[quizId].status = "ended";
 			}
 			// Broadcast to all clients in the room that the quiz has ended
 			io.to(quizId).emit("quiz-ended", { endedAt });
