@@ -61,8 +61,13 @@ function MentorLiveQuiz() {
 		function handleTimerSync(data) {
 			if (data && typeof data.duration === "number") {
 				setTimer(data.duration);
-				if (data.startedAt && !data.endedAt) setQuizStarted(true);
-				if (data.endedAt) setQuizStarted(false);
+				if (data.startedAt && !data.endedAt) {
+					setQuizStarted(true);
+					setForceEndEnabled(true);
+				} else {
+					setQuizStarted(false);
+					setForceEndEnabled(false);
+				}
 			}
 		}
 		onEvent("timer-sync", handleTimerSync);
