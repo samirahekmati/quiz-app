@@ -4,14 +4,10 @@ import { useNavigate } from "react-router";
 import {
 	fetchQuizzes,
 	fetchQuizDetail,
-	createQuiz,
 	deleteQuiz,
 } from "../services/quizService";
-// import { emitEvent } from "../services/socket";
 
-// import LiveQuizSection from "./LiveQuizSection";
-
-function MentorDashboard() {
+function QuizDashboard() {
 	const navigate = useNavigate();
 
 	// Session check: if not logged in, redirect to login
@@ -22,15 +18,6 @@ function MentorDashboard() {
 			navigate("/mentor/login");
 		}
 	}, [navigate]);
-
-	// State for sidebar navigation
-	const [activeSection, setActiveSection] = useState("dashboard");
-	// Quiz creation state
-	const [title, setTitle] = useState("");
-	const [description, setDescription] = useState("");
-	const [duration, setDuration] = useState(""); // in minutes
-	const [error, setError] = useState("");
-	const [loading, setLoading] = useState(false);
 
 	// Quizzes state
 	const [quizzes, setQuizzes] = useState([]);
@@ -46,9 +33,8 @@ function MentorDashboard() {
 	// Add delete handler
 	const [deletingQuizId, setDeletingQuizId] = useState(null);
 
-	// Fetch quizzes when in dashboard
+	// Fetch quizzes on component mount
 	useEffect(() => {
-		if (activeSection !== "dashboard") return;
 		const token = localStorage.getItem("token");
 		setLoadingQuizzes(true);
 		setQuizzesError("");
@@ -56,7 +42,7 @@ function MentorDashboard() {
 			.then((data) => setQuizzes(data || []))
 			.catch((err) => setQuizzesError(err.message || "Failed to load quizzes."))
 			.finally(() => setLoadingQuizzes(false));
-	}, [activeSection]);
+	}, []);
 
 	// Fetch quiz detail when selectedQuiz changes
 	useEffect(() => {
@@ -71,33 +57,6 @@ function MentorDashboard() {
 			)
 			.finally(() => setLoadingQuizDetail(false));
 	}, [selectedQuiz]);
-
-	// Handle quiz creation
-	const handleCreateQuiz = async (e) => {
-		e.preventDefault();
-		setError("");
-		if (!title.trim() || !duration) {
-			setError("Title and duration are required.");
-			return;
-		}
-		setLoading(true);
-		const token = localStorage.getItem("token");
-		try {
-			const data = await createQuiz(token, {
-				title: title.trim(),
-				description: description.trim(),
-				duration: Number(duration) * 60,
-			});
-			setTitle("");
-			setDescription("");
-			setDuration("");
-			navigate(`/mentor/quiz/${data.quiz.id}/edit`);
-		} catch (err) {
-			setError(err.message || "Failed to create quiz.");
-		} finally {
-			setLoading(false);
-		}
-	};
 
 	const handleDeleteQuiz = async (quizId) => {
 		if (!window.confirm("Are you sure you want to delete this quiz?")) return;
@@ -116,26 +75,10 @@ function MentorDashboard() {
 		}
 	};
 
-	// Add logout handler
-	const handleLogout = () => {
-		localStorage.removeItem("token");
-		localStorage.removeItem("currentMentorId");
-		localStorage.removeItem("mentorEmail");
-		localStorage.removeItem("mentorUsername");
-		navigate("/mentor/login");
-	};
-
-	// Sidebar links
-	const navLinks = [
-		{ label: "Profile", section: "profile" },
-		{ label: "Create New Quiz", section: "create" },
-		{ label: "See Quiz Results", section: "results" },
-	];
-
-	// Main content for each section
+	// Main content
 	let mainContent = null;
 	if (selectedQuiz) {
-		// Quiz detail view (no sidebar)
+		// Quiz detail view
 		mainContent = (
 			<div className="max-w-2xl mx-auto">
 				<button
@@ -225,102 +168,8 @@ function MentorDashboard() {
 						) : (
 							<div>No questions found for this quiz.</div>
 						)}
-						{/* Live quiz section for real-time management */}
 					</div>
 				) : null}
-			</div>
-		);
-	} else if (activeSection === "profile") {
-		mainContent = (
-			<div className="max-w-xl mx-auto">
-				<h2 className="text-2xl font-bold mb-4 text-purple-800">Profile</h2>
-				<div className="p-6 bg-purple-100 rounded-2xl shadow-lg text-purple-700 border-t-4 border-purple-500">
-					Profile section coming soon...
-				</div>
-			</div>
-		);
-	} else if (activeSection === "results") {
-		mainContent = (
-			<div className="max-w-xl mx-auto">
-				<h2 className="text-2xl font-bold mb-4 text-purple-800">
-					Quiz Results
-				</h2>
-				<div className="p-6 bg-purple-100 rounded-2xl shadow-lg text-purple-700 border-t-4 border-purple-500">
-					Quiz results section coming soon...
-				</div>
-			</div>
-		);
-	} else if (activeSection === "create") {
-		mainContent = (
-			<div className="max-w-xl mx-auto">
-				<button
-					className="mb-6 px-4 py-2 rounded bg-purple-500 text-white hover:bg-purple-600 transition"
-					onClick={() => setActiveSection("dashboard")}
-				>
-					← Return to Dashboard
-				</button>
-				<h2 className="text-2xl font-bold mb-4 text-purple-800">
-					Create New Quiz
-				</h2>
-				<form
-					onSubmit={handleCreateQuiz}
-					className="space-y-4 bg-purple-100 p-8 rounded-2xl shadow-lg border-t-4 border-purple-500"
-				>
-					<div>
-						<label
-							htmlFor="quiz-title"
-							className="block font-medium mb-1 text-purple-700"
-						>
-							Title
-						</label>
-						<input
-							id="quiz-title"
-							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-							value={title}
-							onChange={(e) => setTitle(e.target.value)}
-							required
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="quiz-description"
-							className="block font-medium mb-1 text-purple-700"
-						>
-							Description
-						</label>
-						<textarea
-							id="quiz-description"
-							className="border rounded px-2 py-1 w-full focus:outline-none focus:ring-2 focus:ring-purple-400"
-							value={description}
-							onChange={(e) => setDescription(e.target.value)}
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="quiz-duration"
-							className="block font-medium mb-1 text-purple-700"
-						>
-							Duration (minutes)
-						</label>
-						<input
-							id="quiz-duration"
-							className="border rounded px-2 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-400"
-							type="number"
-							min="1"
-							value={duration}
-							onChange={(e) => setDuration(e.target.value)}
-							required
-						/>
-					</div>
-					{error && <div className="text-red-500 text-sm">{error}</div>}
-					<button
-						type="submit"
-						className="w-full px-4 py-2 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700 transition"
-						disabled={loading}
-					>
-						{loading ? "Creating..." : "Create Quiz"}
-					</button>
-				</form>
 			</div>
 		);
 	} else {
@@ -368,41 +217,7 @@ function MentorDashboard() {
 		);
 	}
 
-	return (
-		<div className="flex min-h-screen bg-purple-50 relative">
-			{/* Logout button top right */}
-			{activeSection !== "create" && !selectedQuiz && (
-				<button
-					onClick={handleLogout}
-					className="absolute top-6 right-8 px-4 py-2 bg-gray-400 text-white rounded shadow hover:bg-gray-600 transition z-20"
-				>
-					Logout
-				</button>
-			)}
-			{/* Sidebar: hidden when creating quiz or viewing quiz detail */}
-			{activeSection !== "create" && !selectedQuiz && (
-				<aside className="w-64 bg-gradient-to-b from-purple-600 to-purple-400 text-white shadow-lg flex flex-col">
-					<div className="p-6 text-2xl font-bold border-b border-purple-300">
-						Welcome,
-					</div>
-					<ul className="flex-1 p-4 space-y-2">
-						{navLinks.map((link) => (
-							<li key={link.section}>
-								<button
-									className={`w-full text-left px-4 py-2 rounded transition font-semibold ${activeSection === link.section ? "bg-white text-purple-700" : "hover:bg-purple-700 hover:text-white"}`}
-									onClick={() => setActiveSection(link.section)}
-								>
-									{link.label}
-								</button>
-							</li>
-						))}
-					</ul>
-				</aside>
-			)}
-			{/* Main Content */}
-			<main className="flex-1 p-8">{mainContent}</main>
-		</div>
-	);
+	return <div className="w-full">{mainContent}</div>;
 }
 
-export default MentorDashboard;
+export default QuizDashboard;
