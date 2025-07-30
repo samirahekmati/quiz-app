@@ -92,9 +92,41 @@ function StudentQuiz() {
 		const handleTimerSync = (data) => {
 			if (data && typeof data.duration === "number") {
 				setTimer(data.duration);
+
+				if (data.startedAt && !data.endedAt) {
+					setQuizStarted(true);
+				}
 			}
 		};
 		onEvent("timer-sync", handleTimerSync);
+
+		// Listen for student-progress-update event (on reconnect)
+		const handleStudentProgressUpdate = (data) => {
+			if (data && Array.isArray(data.answers)) {
+				const receivedAnswers = {};
+				data.answers.forEach((ans) => {
+					receivedAnswers[ans.question_id] = ans.selected_option;
+				});
+				setAnswers(receivedAnswers);
+				// Set current question to the one after the last answered one
+				const lastAnsweredIndex = quiz?.questions.findIndex(
+					(q) => q.id === data.answers[data.answers.length - 1]?.question_id,
+				);
+				if (
+					lastAnsweredIndex !== -1 &&
+					lastAnsweredIndex < quiz?.questions.length - 1
+				) {
+					setCurrent(lastAnsweredIndex + 1);
+				} else if (lastAnsweredIndex === quiz?.questions.length - 1) {
+					setCurrent(lastAnsweredIndex);
+				}
+				console.log(
+					"[StudentQuiz] Student progress hydrated:",
+					receivedAnswers,
+				);
+			}
+		};
+		onEvent("student-progress-update", handleStudentProgressUpdate);
 
 		// Listen for answer-received event
 		const handleAnswerReceived = () => {
@@ -116,10 +148,11 @@ function StudentQuiz() {
 			offEvent("quiz-started", handleQuizStarted);
 			offEvent("quiz-ended", handleQuizEnded);
 			offEvent("timer-sync", handleTimerSync);
+			offEvent("student-progress-update", handleStudentProgressUpdate);
 			offEvent("answer-received", handleAnswerReceived);
 			offEvent("error", handleError);
 		};
-	}, [quizId, navigate]);
+	}, [quizId, navigate, quiz?.questions]);
 
 	if (loading) {
 		return <div className="p-4 text-center">Loading quiz...</div>;
