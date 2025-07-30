@@ -130,19 +130,52 @@ export async function getQuizById(req, res) {
 // Get the quiz created by a specific user by userId
 export async function getQuizzesByUser(req, res) {
 	const userId = req.user.id;
+	const includeReports = req.query.includeReports === "true";
 
 	try {
-		const result = await db.query(
-			`
-			SELECT id, title, description, duration
-			FROM quizzes
-			WHERE user_id = $1
-			ORDER BY created_at DESC
-			`,
-			[userId],
-		);
+		if (includeReports) {
+			// Get quizzes with student participation data for reports
+			const result = await db.query(
+				`
+				SELECT 
+					q.id, 
+					q.title, 
+					q.description, 
+					q.duration,
+					q.created_at,
+					q.started_at,
+					q.ended_at,
+					COUNT(DISTINCT a.username) as students_participated,
+					(SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) as total_questions,
+					CASE 
+						WHEN q.ended_at IS NOT NULL THEN 'completed'
+						WHEN q.started_at IS NOT NULL AND q.ended_at IS NULL THEN 'in_progress'
+						ELSE 'not_started'
+					END as quiz_status
+				FROM quizzes q
+				LEFT JOIN answers a ON q.id = a.quiz_id
+				WHERE q.user_id = $1
+				GROUP BY q.id, q.title, q.description, q.duration, q.created_at, q.started_at, q.ended_at
+				ORDER BY q.created_at DESC
+				`,
+				[userId],
+			);
 
-		res.json(result.rows);
+			res.json(result.rows);
+		} else {
+			// Original query for dashboard (existing functionality)
+			const result = await db.query(
+				`
+				SELECT id, title, description, duration
+				FROM quizzes
+				WHERE user_id = $1
+				ORDER BY created_at DESC
+				`,
+				[userId],
+			);
+
+			res.json(result.rows);
+		}
 	} catch (error) {
 		logger.error("Error fetching quizzes by user:", error);
 		res
