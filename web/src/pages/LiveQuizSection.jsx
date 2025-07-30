@@ -58,6 +58,30 @@ function LiveQuizSection({ quizId, mentorId }) {
 			});
 		};
 		onEvent("progress-update", handleProgressUpdate);
+
+		// Listen for full-progress-update event (on reconnect)
+		const handleFullProgressUpdate = (data) => {
+			if (data && Array.isArray(data.answers)) {
+				const fullProgress = {};
+				data.answers.forEach((ans) => {
+					const userProgress = fullProgress[ans.username] || {};
+					fullProgress[ans.username] = {
+						...userProgress,
+						[ans.question_id]: {
+							answer: ans.selected_option,
+							timestamp: ans.submitted_at,
+						},
+					};
+				});
+				setProgress(fullProgress);
+				console.log(
+					"[LiveQuizSection] Full progress hydrated:",
+					fullProgress,
+				);
+			}
+		};
+		onEvent("full-progress-update", handleFullProgressUpdate);
+
 		// Listen for quiz-started event
 		const handleQuizStarted = (data) => {
 			setQuizStatusMsg(
@@ -93,6 +117,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 			offEvent("room-users", handleRoomUsers);
 			offEvent("error", handleRoomUsersError);
 			offEvent("progress-update", handleProgressUpdate);
+			offEvent("full-progress-update", handleFullProgressUpdate);
 			offEvent("quiz-started", handleQuizStarted);
 			offEvent("quiz-ended", handleQuizEnded);
 			offEvent("error", handleQuizError);
