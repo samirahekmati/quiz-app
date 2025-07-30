@@ -5,7 +5,7 @@ import { Server as SocketIOServer } from "socket.io";
 import { connectDb } from "./db.js";
 import config from "./utils/config.js";
 import logger from "./utils/logger.js";
-import { setupSocketServer } from "./ws/socketServer.js";
+import { restoreActiveQuizzes, setupSocketServer } from "./ws/socketServer.js";
 
 const { port } = config.init();
 
@@ -21,11 +21,15 @@ const io = new SocketIOServer(server, {
 	cors: {
 		origin: "*", // TODO: Set allowed origins for production
 		methods: ["GET", "POST"],
+		credentials: true,
 	},
 });
 
 // Setup modular socket.io event logic
 setupSocketServer(io);
+
+// Restore active quizzes from DB after server restart
+await restoreActiveQuizzes(io);
 
 // Export io for use in other modules
 export { io };

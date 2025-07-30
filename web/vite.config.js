@@ -19,10 +19,11 @@ const apiPort = process.env.API_PORT ?? "3100";
 const target = `http://localhost:${apiPort}`;
 const port = process.env.PORT;
 const proxy = Object.fromEntries(
-	["/api", "/healthz"].map((path) => [
+	["/api", "/healthz", "/socket.io"].map((path) => [
 		path,
 		{
 			target,
+			ws: true, // Enable proxying for WebSockets
 			configure(proxy_) {
 				if (process.env.LOG_LEVEL?.toLowerCase() === "debug") {
 					proxy_.on("proxyReq", (_, req) => {

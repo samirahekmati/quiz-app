@@ -10,6 +10,73 @@ import config from "../utils/config.js";
 import logger from "../utils/logger.js";
 // In-memory timer state for each quiz (quizId)
 const quizTimers = {};
+// In-memory store for active quiz sessions (quizId)
+const liveQuizzes = {};
+
+// Restores active quiz sessions from the database
+export async function restoreActiveQuizzes(io) {
+	logger.info("[restore] Starting restoration of active quiz sessions...");
+	try {
+		const { rows: activeQuizzes } = await pool.query(
+			`SELECT id, duration, started_at FROM quizzes WHERE started_at IS NOT NULL AND ended_at IS NULL`,
+		);
+
+		if (activeQuizzes.length === 0) {
+			logger.info("[restore] No active quizzes found to restore.");
+			return;
+		}
+
+		const now = Date.now();
+		for (const quiz of activeQuizzes) {
+			const quizId = quiz.id;
+			const elapsed = Math.floor(
+				(now - new Date(quiz.started_at).getTime()) / 1000,
+			);
+			const remaining = Math.max(0, quiz.duration - elapsed);
+
+			liveQuizzes[quizId] = { status: "started" };
+
+			if (remaining > 0) {
+				quizTimers[quizId] = {
+					startedAt: quiz.started_at,
+					duration: quiz.duration,
+					endedAt: null,
+					timeout: setTimeout(() => {
+						const endedAt = new Date().toISOString();
+						io.to(quizId).emit("quiz-ended", { endedAt });
+						pool.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
+							endedAt,
+							quizId,
+						]);
+						if (liveQuizzes[quizId]) {
+							liveQuizzes[quizId].status = "ended";
+						}
+						logger.info(
+							`[restore] Restored quiz auto-ended in room: ${quizId}`,
+						);
+					}, remaining * 1000),
+				};
+				logger.info(
+					`[restore] Restored quiz ${quizId}. Remaining time: ${remaining}s`,
+				);
+			} else {
+				// If time is already up
+				const endedAt = new Date().toISOString();
+				io.to(quizId).emit("quiz-ended", { endedAt });
+				pool.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
+					endedAt,
+					quizId,
+				]);
+				liveQuizzes[quizId].status = "ended";
+				logger.info(
+					`[restore] Restored quiz ${quizId} was already finished. Ending now.`,
+				);
+			}
+		}
+	} catch (err) {
+		logger.error("[restore] Error during quiz session restoration:", err);
+	}
+}
 
 export function setupSocketServer(io) {
 	// Emit timer-sync to all clients in each active quiz room every second
@@ -36,10 +103,9 @@ export function setupSocketServer(io) {
 			try {
 				const decoded = jwt.verify(token, config.jwtSecret);
 				socket.userId = decoded.id;
-				// Set role to 'mentor' for any valid JWT (no need for role in JWT or DB)
+				// Set role to 'mentor' for any valid JWT
 				socket.role = "mentor";
 			} catch {
-				// Invalid token: block mentor, allow student (MVP)
 				return next(new Error("Invalid or expired token"));
 			}
 		} else {
@@ -53,6 +119,27 @@ export function setupSocketServer(io) {
 	// Listen for new client connections
 	io.on("connection", (socket) => {
 		logger.info(`[socket.io] Client connected: ${socket.id}`);
+
+		// Listen for mentor-runs-quiz event from mentor client
+		socket.on("mentor-runs-quiz", (data) => {
+			const { quizId } = data;
+			if (socket.role !== "mentor") {
+				return socket.emit("error", {
+					message: "Only mentors can run a quiz.",
+				});
+			}
+			if (!quizId) {
+				return socket.emit("error", { message: "quizId is required." });
+			}
+			liveQuizzes[quizId] = {
+				status: "waiting", // 'waiting', 'started', 'ended'
+				mentorSocketId: socket.id,
+			};
+			logger.info(
+				`[socket.io] Quiz session created for quizId: ${quizId} by mentor ${socket.id}`,
+			);
+			socket.emit("quiz-session-created", { quizId });
+		});
 
 		// Listen for client disconnect
 		socket.on("disconnect", (reason) => {
@@ -88,6 +175,43 @@ export function setupSocketServer(io) {
 		socket.on("join-room", async (data) => {
 			logger.info(`[DEBUG] join-room event received:`, data);
 			const { quizId, userId, role } = data;
+
+			// Quiz Gatekeeper
+			const session = liveQuizzes[quizId];
+			if (role === "student") {
+				if (!session) {
+					return socket.emit("error", {
+						message: "This quiz is not live yet. Please wait for the mentor.",
+					});
+				}
+				if (session.status === "ended") {
+					// Check if student participated to allow viewing results
+					try {
+						const db = (await import("../db.js")).default;
+						const { rowCount } = await db.query(
+							`SELECT id FROM answers WHERE quiz_id = $1 AND username = $2 LIMIT 1`,
+							[quizId, userId],
+						);
+						if (rowCount > 0) {
+							// Student participated, allow them to see results
+							return socket.emit("quiz-has-ended");
+						}
+						// Student did not participate
+						return socket.emit("error", {
+							message: "This quiz has ended and you did not participate in it.",
+						});
+					} catch (err) {
+						logger.error(
+							`[socket.io] DB error checking participation for user ${userId} in quiz ${quizId}:`,
+							err,
+						);
+						return socket.emit("error", {
+							message: "Error verifying your participation.",
+						});
+					}
+				}
+			}
+
 			if (!quizId) {
 				socket.emit("error", { message: "quizId is required to join room" });
 				return;
@@ -178,7 +302,7 @@ export function setupSocketServer(io) {
 		 * Mentor starts the quiz for all users in the room
 		 * @param {Object} data - { quizId: string, startedAt: string (ISO), duration: number (seconds) }
 		 */
-		socket.on("quiz-started", (data) => {
+		socket.on("quiz-started", async (data) => {
 			logger.info(`[DEBUG] quiz-started event received:`, data);
 			const { quizId, startedAt, duration } = data;
 			if (!quizId || !startedAt || !duration) {
@@ -187,7 +311,27 @@ export function setupSocketServer(io) {
 				});
 				return;
 			}
-			// If timer already exists for this quiz, clear it (prevent duplicate)
+			// Update session status
+			if (liveQuizzes[quizId]) {
+				liveQuizzes[quizId].status = "started";
+			}
+
+			try {
+				await pool.query(`UPDATE quizzes SET started_at = $1 WHERE id = $2`, [
+					startedAt,
+					quizId,
+				]);
+			} catch (err) {
+				logger.error(
+					`[socket.io] Error persisting start time for quiz ${quizId}:`,
+					err,
+				);
+				return socket.emit("error", {
+					message: "Failed to save quiz start time.",
+				});
+			}
+
+			// If timer already exists for this quiz
 			if (quizTimers[quizId]?.timeout) {
 				clearTimeout(quizTimers[quizId].timeout);
 			}
@@ -204,6 +348,22 @@ export function setupSocketServer(io) {
 						`[socket.io] Quiz auto-ended in room: ${quizId} (endedAt: ${endedAt})`,
 					);
 					quizTimers[quizId].endedAt = endedAt;
+					// Update session status
+					if (liveQuizzes[quizId]) {
+						liveQuizzes[quizId].status = "ended";
+					}
+
+					pool
+						.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
+							endedAt,
+							quizId,
+						])
+						.catch((err) =>
+							logger.error(
+								`[socket.io] Error persisting end time for auto-ended quiz ${quizId}:`,
+								err,
+							),
+						);
 				}, duration * 1000),
 			};
 			// Broadcast to all clients in the room that the quiz has started
@@ -275,7 +435,7 @@ export function setupSocketServer(io) {
 		 * Mentor ends the quiz for all users in the room (force end)
 		 * @param {Object} data - { quizId: string, endedAt: string (ISO) }
 		 */
-		socket.on("quiz-ended", (data) => {
+		socket.on("quiz-ended", async (data) => {
 			const { quizId, endedAt } = data;
 			if (!quizId || !endedAt) {
 				socket.emit("error", {
@@ -283,11 +443,30 @@ export function setupSocketServer(io) {
 				});
 				return;
 			}
-			// If timer exists, clear it (force end)
 			if (quizTimers[quizId]?.timeout) {
 				clearTimeout(quizTimers[quizId].timeout);
 				quizTimers[quizId].endedAt = endedAt;
 			}
+			// Update session status
+			if (liveQuizzes[quizId]) {
+				liveQuizzes[quizId].status = "ended";
+			}
+
+			try {
+				await pool.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
+					endedAt,
+					quizId,
+				]);
+			} catch (err) {
+				logger.error(
+					`[socket.io] Error persisting end time for quiz ${quizId}:`,
+					err,
+				);
+				return socket.emit("error", {
+					message: "Failed to save quiz end time.",
+				});
+			}
+
 			// Broadcast to all clients in the room that the quiz has ended
 			io.to(quizId).emit("quiz-ended", { endedAt });
 			logger.info(
