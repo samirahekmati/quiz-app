@@ -33,6 +33,7 @@ function MentorLiveQuiz() {
 	// Always join room on mount
 	useEffect(() => {
 		if (!quizId || !mentorId) return;
+		emitEvent("mentor-runs-quiz", { quizId });
 		emitEvent("join-room", { quizId, userId: mentorId, role: "mentor" });
 		console.log("Mentor join-room emitted", { quizId, mentorId });
 		// Listen for room-joined confirmation

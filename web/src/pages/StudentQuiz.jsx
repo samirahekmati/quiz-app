@@ -88,6 +88,11 @@ function StudentQuiz() {
 		};
 		onEvent("quiz-ended", handleQuizEnded);
 
+		const handleQuizHasEnded = () => {
+			navigate(`/student/result/${quizId}`);
+		};
+		onEvent("quiz-has-ended", handleQuizHasEnded);
+
 		// Listen for timer-sync event
 		const handleTimerSync = (data) => {
 			if (data && typeof data.duration === "number") {
@@ -147,6 +152,7 @@ function StudentQuiz() {
 		return () => {
 			offEvent("quiz-started", handleQuizStarted);
 			offEvent("quiz-ended", handleQuizEnded);
+			offEvent("quiz-has-ended", handleQuizHasEnded);
 			offEvent("timer-sync", handleTimerSync);
 			offEvent("student-progress-update", handleStudentProgressUpdate);
 			offEvent("answer-received", handleAnswerReceived);
