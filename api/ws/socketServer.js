@@ -246,8 +246,25 @@ export function setupSocketServer(io) {
 				// Progress Sync
 				try {
 					if (role === "mentor") {
+						// New query to get all answers with their index and total questions
 						const { rows: allAnswers } = await pool.query(
-							`SELECT * FROM answers WHERE quiz_id = $1 ORDER BY submitted_at ASC`,
+							`
+						WITH QuestionIndexes AS (
+							SELECT 
+								id, 
+								quiz_id,
+								ROW_NUMBER() OVER(PARTITION BY quiz_id ORDER BY id) as question_index
+							FROM questions
+						)
+						SELECT 
+							a.*,
+							qi.question_index,
+							(SELECT COUNT(*) FROM questions WHERE quiz_id = a.quiz_id) as total_questions
+						FROM answers a
+						JOIN QuestionIndexes qi ON a.question_id = qi.id
+						WHERE a.quiz_id = $1 
+						ORDER BY a.submitted_at ASC
+						`,
 							[quizId],
 						);
 						if (allAnswers.length > 0) {
@@ -377,12 +394,24 @@ export function setupSocketServer(io) {
 		 * Student submits an answer to a quiz question (real-time)
 		 * Logic is implemented here (not in answers/ or quiz/) to avoid conflicts for now.
 		 * This handler validates data and saves the answer directly to the DB.
-		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string }
+		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string, questionIndex: number, totalQuestions: number }
 		 */
 		socket.on("submit-answer", async (data) => {
 			logger.info("[DEBUG] submit-answer event received:", data);
-			const { quizId, userId, questionId, answer } = data;
-			if (!quizId || !userId || !questionId || !answer) {
+			const {
+				quizId,
+				userId,
+				questionId,
+				answer,
+				questionIndex,
+				totalQuestions,
+			} = data;
+			if (
+				!quizId ||
+				!userId ||
+				!questionId ||
+				!answer
+			) {
 				logger.info("[DEBUG] submit-answer missing fields", {
 					quizId,
 					userId,
@@ -396,34 +425,71 @@ export function setupSocketServer(io) {
 				return;
 			}
 			try {
-				// Direct DB access
-				const query = `
-          INSERT INTO answers (username, quiz_id, question_id, selected_option)
-          VALUES ($1, $2, $3, $4)
-          RETURNING *;
-        `;
-				const values = [userId, quizId, questionId, answer];
-				logger.info("[DEBUG] submit-answer DB values:", values);
-				const { rows } = await pool.query(query, values);
-				logger.info(
-					`[socket.io] Answer submitted by user ${userId} for quiz ${quizId}, question ${questionId}`,
-				);
-				socket.emit("answer-received", { success: true, answer: rows[0] });
+				const answersToInsert = Array.isArray(answer) ? answer : [answer];
+				if (answersToInsert.length === 0) {
+					logger.info(
+						`[socket.io] User ${userId} submitted an empty answer for question ${questionId}. Skipping DB insert.`,
+					);
+					return;
+				}
+
+				const client = await pool.connect();
+				try {
+					await client.query("BEGIN");
+
+					await client.query(
+						`DELETE FROM answers WHERE username = $1 AND quiz_id = $2 AND question_id = $3`,
+						[userId, quizId, questionId],
+					);
+
+					
+					const insertPromises = answersToInsert.map((singleAnswer) => {
+						const query = `
+              INSERT INTO answers (username, quiz_id, question_id, selected_option)
+              VALUES ($1, $2, $3, $4)
+              RETURNING *;
+            `;
+						// answer now can be an array
+						const values = [userId, quizId, questionId, singleAnswer];
+						return client.query(query, values);
+					});
+
+					const results = await Promise.all(insertPromises);
+					const insertedRows = results.map((res) => res.rows[0]).filter(Boolean);
+
+					await client.query("COMMIT");
+
+					logger.info(
+						`[socket.io] Answer submitted by user ${userId} for quiz ${quizId}, question ${questionId}. Inserted ${insertedRows.length} rows.`,
+					);
+
+					socket.emit("answer-received", {
+						success: true,
+						answers: insertedRows,
+					});
+				} catch (err) {
+					await client.query("ROLLBACK");
+					throw err;
+				} finally {
+					client.release();
+				}
+
 				// Emit progress-update to mentor in the room
-				// Find all sockets in the room with role 'mentor'
 				const clients = await io.in(quizId).fetchSockets();
 				clients
 					.filter(
 						(s) => s.handshake.auth?.role === "mentor" || s.role === "mentor",
 					)
 					.forEach((mentorSocket) => {
-						mentorSocket.emit("progress-update", {
-							quizId,
-							userId,
-							questionId,
-							answer,
-							timestamp: new Date().toISOString(),
-						});
+						if (questionIndex && totalQuestions) {
+							mentorSocket.emit("progress-update", {
+								userId,
+								questionIndex,
+								totalQuestions,
+								status:
+									questionIndex === totalQuestions ? "completed" : "in-progress",
+							});
+						}
 					});
 			} catch (err) {
 				logger.error("[socket.io] Error saving answer:", err);
