@@ -246,8 +246,25 @@ export function setupSocketServer(io) {
 				// Progress Sync
 				try {
 					if (role === "mentor") {
+						// New query to get all answers with their index and total questions
 						const { rows: allAnswers } = await pool.query(
-							`SELECT * FROM answers WHERE quiz_id = $1 ORDER BY submitted_at ASC`,
+							`
+						WITH QuestionIndexes AS (
+							SELECT 
+								id, 
+								quiz_id,
+								ROW_NUMBER() OVER(PARTITION BY quiz_id ORDER BY id) as question_index
+							FROM questions
+						)
+						SELECT 
+							a.*,
+							qi.question_index,
+							(SELECT COUNT(*) FROM questions WHERE quiz_id = a.quiz_id) as total_questions
+						FROM answers a
+						JOIN QuestionIndexes qi ON a.question_id = qi.id
+						WHERE a.quiz_id = $1 
+						ORDER BY a.submitted_at ASC
+						`,
 							[quizId],
 						);
 						if (allAnswers.length > 0) {
