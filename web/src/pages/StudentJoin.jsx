@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useEffect } from "react";
-import { useNavigate } from "react-router";
+import { useNavigate, useSearchParams } from "react-router-dom";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
 import {
@@ -17,6 +17,17 @@ function StudentJoin() {
 	const [showError, setShowError] = useState(false);
 	const [loading, setLoading] = useState(false);
 	const navigate = useNavigate();
+	const [searchParams] = useSearchParams();
+
+	const isQuizIdFromUrl = searchParams.has("quizId");
+
+	// On component mount, check for quizId in URL
+	useEffect(() => {
+		const quizIdFromUrl = searchParams.get("quizId");
+		if (quizIdFromUrl) {
+			setQuizId(quizIdFromUrl);
+		}
+	}, [searchParams]);
 
 	const handleSubmit = async (e) => {
 		e.preventDefault();
@@ -98,11 +109,12 @@ function StudentJoin() {
 					</label>
 					<input
 						id="quiz-id"
-						className="border rounded px-2 py-1 w-full"
+						className="border rounded px-2 py-1 w-full disabled:bg-gray-200 disabled:text-gray-500"
 						type="number"
 						value={quizId}
 						onChange={(e) => setQuizId(e.target.value)}
 						required
+						disabled={isQuizIdFromUrl}
 					/>
 				</div>
 				{error && <div className="text-red-600 text-sm">{error}</div>}
