@@ -1,12 +1,14 @@
 import { useState, useEffect } from "react";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
+import { fetchStudents } from "../services/quizService";
 
 function QuizReports() {
 	const [quizzes, setQuizzes] = useState([]);
 	const [error, setError] = useState("");
 	// state for the selected quiz
 	const [selectedQuiz, setSelectedQuiz] = useState(null);
+	const [students, setStudents] = useState({ summary: [], details: [] });
 
 	useEffect(() => {
 		async function fetchQuizReports() {
@@ -43,9 +45,19 @@ function QuizReports() {
 
 		fetchQuizReports();
 	}, []);
-
+	// when quiz clicked, fetch students
 	async function handleQuizClick(quizId) {
 		setSelectedQuiz(quizId);
+
+		try {
+			const token = localStorage.getItem("token");
+			const students = await fetchStudents(token, quizId);
+			setStudents(students);
+		} catch {
+			setError("Failed to fetch students.");
+		} finally {
+			// setLoadingStudents(false); // This line was removed
+		}
 	}
 
 	if (error) {
@@ -97,10 +109,31 @@ function QuizReports() {
 				<div>
 					<button
 						onClick={() => setSelectedQuiz(null)}
-						className="mb-6 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+						className="mb-6 px-4 py-2 bg-orange-500 text-white rounded shadow hover:bg-orange-700 transition font-semibold"
 					>
 						← Back to Quiz Reports
 					</button>
+
+					<h2 className="text-xl font-semibold mb-4 text-orange-800">
+						Students
+					</h2>
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+						{students.summary.map((student, index) => (
+							<button
+								key={index}
+								type="button"
+								onClick={() =>
+									console.log("Student clicked:", student.username)
+								}
+								className="bg-orange-100 rounded-lg shadow p-4 border border-orange-200 relative w-full text-left hover:scale-105 transition-transform focus:outline-none"
+								aria-label={`View student ${student.username}`}
+							>
+								<h4 className="font-bold text-orange-900">
+									{student.username}
+								</h4>
+							</button>
+						))}
+					</div>
 				</div>
 			)}
 		</div>
