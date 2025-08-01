@@ -297,7 +297,7 @@ export async function getQuizStudents(req, res) {
 			SELECT 
 				a.username,
 				q.text as question_text,
-				a.selected_option as student_answer,
+				o.text as student_answer,
 				o.is_correct,
 				a.submitted_at
 			FROM answers a
