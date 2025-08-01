@@ -36,7 +36,7 @@ export async function handleLogin(req, res) {
 
 		// Generate a JWT token
 		const token = jwt.sign({ id: user.id, email: user.email }, JWT_SECRET, {
-			expiresIn: "1h",
+			expiresIn: "7d",
 		});
 
 		res.status(200).json({
@@ -88,7 +88,7 @@ export async function handleRegister(req, res) {
 			{ id: newUser.id, email: newUser.email },
 			JWT_SECRET,
 			{
-				expiresIn: "1h",
+				expiresIn: "7d",
 			},
 		);
 
