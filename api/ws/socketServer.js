@@ -246,8 +246,25 @@ export function setupSocketServer(io) {
 				// Progress Sync
 				try {
 					if (role === "mentor") {
+						// New query to get all answers with their index and total questions
 						const { rows: allAnswers } = await pool.query(
-							`SELECT * FROM answers WHERE quiz_id = $1 ORDER BY submitted_at ASC`,
+							`
+						WITH QuestionIndexes AS (
+							SELECT 
+								id, 
+								quiz_id,
+								ROW_NUMBER() OVER(PARTITION BY quiz_id ORDER BY id) as question_index
+							FROM questions
+						)
+						SELECT 
+							a.*,
+							qi.question_index,
+							(SELECT COUNT(*) FROM questions WHERE quiz_id = a.quiz_id) as total_questions
+						FROM answers a
+						JOIN QuestionIndexes qi ON a.question_id = qi.id
+						WHERE a.quiz_id = $1 
+						ORDER BY a.submitted_at ASC
+						`,
 							[quizId],
 						);
 						if (allAnswers.length > 0) {
@@ -377,12 +394,24 @@ export function setupSocketServer(io) {
 		 * Student submits an answer to a quiz question (real-time)
 		 * Logic is implemented here (not in answers/ or quiz/) to avoid conflicts for now.
 		 * This handler validates data and saves the answer directly to the DB.
-		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string }
+		 * @param {Object} data - { quizId: string, userId: string, questionId: string, answer: string, questionIndex: number, totalQuestions: number }
 		 */
 		socket.on("submit-answer", async (data) => {
 			logger.info("[DEBUG] submit-answer event received:", data);
-			const { quizId, userId, questionId, answer } = data;
-			if (!quizId || !userId || !questionId || !answer) {
+			const {
+				quizId,
+				userId,
+				questionId,
+				answer,
+				questionIndex,
+				totalQuestions,
+			} = data;
+			if (
+				!quizId ||
+				!userId ||
+				!questionId ||
+				!answer
+			) {
 				logger.info("[DEBUG] submit-answer missing fields", {
 					quizId,
 					userId,
@@ -417,13 +446,16 @@ export function setupSocketServer(io) {
 						(s) => s.handshake.auth?.role === "mentor" || s.role === "mentor",
 					)
 					.forEach((mentorSocket) => {
-						mentorSocket.emit("progress-update", {
-							quizId,
-							userId,
-							questionId,
-							answer,
-							timestamp: new Date().toISOString(),
-						});
+						// Only send update if we have the new progress data
+						if (questionIndex && totalQuestions) {
+							mentorSocket.emit("progress-update", {
+								userId,
+								questionIndex,
+								totalQuestions,
+								status:
+									questionIndex === totalQuestions ? "completed" : "in-progress",
+							});
+						}
 					});
 			} catch (err) {
 				logger.error("[socket.io] Error saving answer:", err);

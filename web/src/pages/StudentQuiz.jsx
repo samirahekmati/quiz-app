@@ -220,11 +220,20 @@ function StudentQuiz() {
 			userId: localStorage.getItem("studentUsername") || "",
 			questionId: question.id,
 			answer: newAnswers[question.id],
+			// Add progress info for mentor view
+			questionIndex: current + 1,
+			totalQuestions: questions.length,
 		});
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
-			// Wait for quiz-ended event to navigate to result page
+			// On last question, ask for confirmation to finish
+			const isFinished = window.confirm(
+				"Are you sure you want to finish the quiz?",
+			);
+			if (isFinished) {
+				navigate(`/student/result/${quizId}`);
+			}
 		}
 	};
 

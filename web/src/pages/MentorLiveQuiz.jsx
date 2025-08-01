@@ -70,7 +70,7 @@ function MentorLiveQuiz() {
 		console.log("Mentor started quiz", { quizId, duration: quizDetail.duration });
 	};
 
-	// Logic for hydrating progress on reconnect
+	// Restore progress on reconnect
 	useEffect(() => {
 		const handleFullProgressUpdate = (data) => {
 			if (data && Array.isArray(data.answers) && quizDetail?.questions) {
@@ -119,7 +119,7 @@ function MentorLiveQuiz() {
 		return () => {
 			offEvent("full-progress-update", handleFullProgressUpdate);
 		};
-	}, [quizDetail]); // Dependency on quizDetail is crucial
+	}, [quizDetail]);
 
 	// Timer sync logic
 	useEffect(() => {
