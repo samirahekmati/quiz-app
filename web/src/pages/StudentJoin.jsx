@@ -75,64 +75,80 @@ function StudentJoin() {
 	}, []);
 
 	return (
-		<div className="p-4 max-w-md mx-auto">
-			{/* Error alert at the top (dismissable) */}
-			{showError && error && (
-				<div className="mb-4 p-2 bg-red-100 border border-red-400 text-red-700 rounded flex items-center justify-between">
-					<span>{error}</span>
-					<button
-						className="ml-4 text-red-700 font-bold px-2"
-						onClick={() => setShowError(false)}
-						aria-label="Dismiss error"
-					>
-						×
-					</button>
+		<div className="min-h-screen bg-gradient-to-br from-green-400 to-cyan-500 flex items-center justify-center p-4">
+			<div className="w-full max-w-md">
+				{/* Error alert at the top (dismissable) */}
+				{showError && error && (
+					<div className="mb-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-lg flex items-center justify-between shadow-lg">
+						<span>{error}</span>
+						<button
+							className="ml-4 text-red-700 font-bold px-2"
+							onClick={() => setShowError(false)}
+							aria-label="Dismiss error"
+						>
+							×
+						</button>
+					</div>
+				)}
+				<div className="bg-white rounded-2xl shadow-2xl p-8">
+					<h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+						Join Quiz
+					</h1>
+					<form onSubmit={handleSubmit} className="space-y-6">
+						<div>
+							<label
+								htmlFor="username"
+								className="block font-medium mb-2 text-gray-700"
+							>
+								Your Name
+							</label>
+							<input
+								id="username"
+								className="border-gray-300 border rounded-lg px-4 py-2 w-full focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+								value={username}
+								onChange={(e) => setUsername(e.target.value)}
+								placeholder="Enter your name"
+								required
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="quiz-id"
+								className="block font-medium mb-2 text-gray-700"
+							>
+								Quiz ID
+							</label>
+							<input
+								id="quiz-id"
+								className="border-gray-300 border rounded-lg px-4 py-2 w-full disabled:bg-gray-200 disabled:text-gray-500 focus:ring-2 focus:ring-green-500 focus:border-green-500 transition"
+								type="number"
+								value={quizId}
+								onChange={(e) => setQuizId(e.target.value)}
+								placeholder="Enter the quiz ID"
+								required
+								disabled={isQuizIdFromUrl}
+							/>
+						</div>
+						{error && !showError && (
+							<div className="text-red-600 text-sm text-center">{error}</div>
+						)}
+						<button
+							type="submit"
+							className="w-full px-4 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-300 transform hover:scale-105"
+							disabled={loading}
+						>
+							{loading ? "Joining..." : "Join the Quiz!"}
+						</button>
+					</form>
 				</div>
-			)}
-			<h1 className="text-2xl font-bold mb-4">Join Quiz</h1>
-			<form onSubmit={handleSubmit} className="space-y-4 border p-4 rounded">
-				<div>
-					<label htmlFor="username" className="block font-medium mb-1">
-						Username
-					</label>
-					<input
-						id="username"
-						className="border rounded px-2 py-1 w-full"
-						value={username}
-						onChange={(e) => setUsername(e.target.value)}
-						required
-					/>
-				</div>
-				<div>
-					<label htmlFor="quiz-id" className="block font-medium mb-1">
-						Quiz ID
-					</label>
-					<input
-						id="quiz-id"
-						className="border rounded px-2 py-1 w-full disabled:bg-gray-200 disabled:text-gray-500"
-						type="number"
-						value={quizId}
-						onChange={(e) => setQuizId(e.target.value)}
-						required
-						disabled={isQuizIdFromUrl}
-					/>
-				</div>
-				{error && <div className="text-red-600 text-sm">{error}</div>}
 				<button
-					type="submit"
-					className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition"
-					disabled={loading}
+					className="mt-6 w-full px-4 py-2 text-green rounded-lg hover:bg-white hover:bg-opacity-20 transition"
+					type="button"
+					onClick={() => navigate("/")}
 				>
-					{loading ? "Joining..." : "Join"}
+					Back to Home
 				</button>
-			</form>
-			<button
-				className="mt-4 px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-				type="button"
-				onClick={() => navigate("/")}
-			>
-				Back to Home
-			</button>
+			</div>
 		</div>
 	);
 }
