@@ -15,6 +15,16 @@ function MentorLiveQuiz() {
 	const [timer, setTimer] = useState(null); // seconds left
 	const [quizDetail, setQuizDetail] = useState(null); // Full quiz object with questions
 	const [initialProgress, setInitialProgress] = useState({}); // Progress state on reconnect
+	const [inviteLink, setInviteLink] = useState("");
+	const [copied, setCopied] = useState(false);
+
+	// Create invite link when quizId is available
+	useEffect(() => {
+		if (quizId) {
+			const link = `${window.location.origin}/student/join?quizId=${quizId}`;
+			setInviteLink(link);
+		}
+	}, [quizId]);
 
 	// Fetch quiz detail for duration and questions list
 	useEffect(() => {
@@ -139,6 +149,14 @@ function MentorLiveQuiz() {
 			endedAt: new Date().toISOString(),
 		});
 		setForceEndEnabled(false);
+		setTimer(0);
+	};
+
+	const copyToClipboard = () => {
+		navigator.clipboard.writeText(inviteLink).then(() => {
+			setCopied(true);
+			setTimeout(() => setCopied(false), 2000);
+		});
 	};
 
 	return (
@@ -152,6 +170,29 @@ function MentorLiveQuiz() {
 			<h1 className="text-2xl font-bold mb-4 text-purple-800">
 				Live Quiz Session for: {quizDetail?.title || "..."}
 			</h1>
+
+			{!quizStarted && (
+				<div className="mb-6 p-4 border rounded-lg bg-gray-50">
+					<p className="font-semibold mb-2 text-gray-700">
+						Invite students to join:
+					</p>
+					<div className="flex items-center space-x-2">
+						<input
+							type="text"
+							value={inviteLink}
+							readOnly
+							className="w-full px-2 py-1 border rounded bg-gray-200 text-gray-600"
+						/>
+						<button
+							onClick={copyToClipboard}
+							className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+						>
+							{copied ? "Copied!" : "Copy"}
+						</button>
+					</div>
+				</div>
+			)}
+
 			{quizStarted && (
 				<div className="mb-4 text-lg font-mono text-blue-700">
 					Time left: {timer !== null ? timer : "-"}s
