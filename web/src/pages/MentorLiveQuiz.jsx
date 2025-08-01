@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
 import { emitEvent, onEvent, offEvent } from "../services/socket";
+import { formatTime } from "../services/timeFormatter";
 
 import LiveQuizSection from "./LiveQuizSection";
 
@@ -194,8 +195,8 @@ function MentorLiveQuiz() {
 			)}
 
 			{quizStarted && (
-				<div className="mb-4 text-lg font-mono text-blue-700">
-					Time left: {timer !== null ? timer : "-"}s
+				<div className="mb-4 text-lg font-mono text-purple-700">
+					Time left: {formatTime(timer)}
 				</div>
 			)}
 			<div className="mb-4 flex gap-2">
