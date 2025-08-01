@@ -198,11 +198,6 @@ function QuizEdit() {
 		setEditingQuestionId(null);
 	};
 
-	// TODO: Finish quiz logic (redirect to dashboard)
-	const handleFinishQuiz = () => {
-		navigate("/mentor/dashboard");
-	};
-
 	// Delete a question by ID
 	const handleDeleteQuestion = async (questionId) => {
 		if (!window.confirm("Are you sure you want to delete this question?"))
@@ -225,230 +220,231 @@ function QuizEdit() {
 	};
 
 	return (
-		<div className="p-8 max-w-2xl mx-auto bg-purple-100 rounded-2xl shadow-lg border-t-4 border-purple-500">
-			{/* Quiz Edit Section */}
-			<h1 className="text-2xl font-bold mb-6 text-purple-800">Edit Quiz</h1>
-			{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
-			{loading && (
-				<div className="text-purple-500 text-sm mb-2">Loading quiz...</div>
-			)}
-			{/* Quiz Edit Form */}
-			<section className="mb-10">
-				<form
-					onSubmit={handleQuizUpdate}
-					className="p-6 bg-white rounded-xl shadow border border-purple-200"
-				>
-					<h2 className="text-lg font-semibold mb-4 text-purple-700">
-						Quiz Details
-					</h2>
-					<div className="mb-4">
-						<label htmlFor="quiz-title" className="block mb-1 text-purple-700">
-							Title
-						</label>
-						<input
-							id="quiz-title"
-							value={quizTitle}
-							onChange={(e) => setQuizTitle(e.target.value)}
-							className="w-full p-2 border rounded bg-purple-50 border-purple-200"
-							required
-						/>
-					</div>
-					<div className="mb-4">
-						<label
-							htmlFor="quiz-description"
-							className="block mb-1 text-purple-700"
-						>
-							Description
-						</label>
-						<textarea
-							id="quiz-description"
-							value={quizDescription}
-							onChange={(e) => setQuizDescription(e.target.value)}
-							className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
-							required
-						/>
-					</div>
-					<div className="mb-4">
-						<label
-							htmlFor="quiz-duration"
-							className="block mb-1 text-purple-700"
-						>
-							Duration (minutes)
-						</label>
-						<input
-							id="quiz-duration"
-							type="number"
-							value={quizDurationMinutes}
-							onChange={handleDurationMinutesChange}
-							className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
-							required
-							min={1}
-						/>
-					</div>
-					<button
-						type="submit"
-						className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
-						disabled={saving}
+		<div className="max-w-2xl mx-auto">
+			<button
+				onClick={() => navigate(`/mentor/quiz/${quizId}`)}
+				className="mb-6 px-4 py-2 rounded bg-purple-500 text-white hover:bg-purple-700 transition font-semibold shadow"
+				type="button"
+			>
+				← Back to Quiz
+			</button>
+			<div className="p-8 bg-purple-100 rounded-2xl shadow-lg border-t-4 border-purple-500">
+				{/* Quiz Edit Section */}
+				<h1 className="text-2xl font-bold mb-6 text-purple-800">Edit Quiz</h1>
+				{error && <div className="text-red-600 text-sm mb-2">{error}</div>}
+				{loading && (
+					<div className="text-purple-500 text-sm mb-2">Loading quiz...</div>
+				)}
+				{/* Quiz Edit Form */}
+				<section className="mb-10">
+					<form
+						onSubmit={handleQuizUpdate}
+						className="p-6 bg-white rounded-xl shadow border border-purple-200"
 					>
-						{saving ? "Saving..." : "Save"}
-					</button>
-					{saveMsg && <p className="mt-2 text-sm text-purple-700">{saveMsg}</p>}
-				</form>
-			</section>
-			{/* Question Form Section */}
-			<section>
-				<h2 className="text-lg font-semibold mb-4 text-purple-700">
-					Questions
-				</h2>
-				{/* Add Question Form */}
-				<form
-					onSubmit={handleAddQuestion}
-					className="mb-8 space-y-4 bg-white p-6 rounded-xl shadow border border-purple-200"
-				>
-					<div>
-						<label
-							htmlFor="question-text"
-							className="block font-medium mb-1 text-purple-700"
+						<h2 className="text-lg font-semibold mb-4 text-purple-700">
+							Quiz Details
+						</h2>
+						<div className="mb-4">
+							<label
+								htmlFor="quiz-title"
+								className="block mb-1 text-purple-700"
+							>
+								Title
+							</label>
+							<input
+								id="quiz-title"
+								value={quizTitle}
+								onChange={(e) => setQuizTitle(e.target.value)}
+								className="w-full p-2 border rounded bg-purple-50 border-purple-200"
+								required
+							/>
+						</div>
+						<div className="mb-4">
+							<label
+								htmlFor="quiz-description"
+								className="block mb-1 text-purple-700"
+							>
+								Description
+							</label>
+							<textarea
+								id="quiz-description"
+								value={quizDescription}
+								onChange={(e) => setQuizDescription(e.target.value)}
+								className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
+								required
+							/>
+						</div>
+						<div className="mb-4">
+							<label
+								htmlFor="quiz-duration"
+								className="block mb-1 text-purple-700"
+							>
+								Duration (minutes)
+							</label>
+							<input
+								id="quiz-duration"
+								type="number"
+								value={quizDurationMinutes}
+								onChange={handleDurationMinutesChange}
+								className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
+								required
+								min={1}
+							/>
+						</div>
+						<button
+							type="submit"
+							className="bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700"
+							disabled={saving}
 						>
-							Question Text
-						</label>
-						<textarea
-							id="question-text"
-							className="border rounded px-2 py-1 w-full min-h-[60px] bg-purple-50 border-purple-200"
-							value={questionText}
-							onChange={(e) => setQuestionText(e.target.value)}
-							required
-						/>
-					</div>
-					<div>
-						<label
-							htmlFor="options"
-							className="block font-medium mb-1 text-purple-700"
-						>
-							Options
-						</label>
-					</div>
+							{saving ? "Saving..." : "Save"}
+						</button>
+						{saveMsg && (
+							<p className="mt-2 text-sm text-purple-700">{saveMsg}</p>
+						)}
+					</form>
+				</section>
+				{/* Question Form Section */}
+				<section>
+					<h2 className="text-lg font-semibold mb-4 text-purple-700">
+						Questions
+					</h2>
+					{/* Add Question Form */}
+					<form
+						onSubmit={handleAddQuestion}
+						className="mb-8 space-y-4 bg-white p-6 rounded-xl shadow border border-purple-200"
+					>
+						<div>
+							<label
+								htmlFor="question-text"
+								className="block font-medium mb-1 text-purple-700"
+							>
+								Question Text
+							</label>
+							<textarea
+								id="question-text"
+								className="border rounded px-2 py-1 w-full min-h-[60px] bg-purple-50 border-purple-200"
+								value={questionText}
+								onChange={(e) => setQuestionText(e.target.value)}
+								required
+							/>
+						</div>
+						<div>
+							<label
+								htmlFor="options"
+								className="block font-medium mb-1 text-purple-700"
+							>
+								Options
+							</label>
+						</div>
 
-					{questionType === "multiple-choice" && (
-						<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
-							<ul className="mb-2">
-								{optionFields.map((opt, idx) => (
-									<li key={idx} className="flex items-center gap-2 mb-1">
-										<span>{String.fromCharCode(65 + idx)}.</span>
-										<input
-											className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
-											value={opt.text}
-											onChange={(e) =>
-												handleOptionChange(idx, "text", e.target.value)
-											}
-											placeholder={`Option ${idx + 1}`}
-											required
-										/>
-										<label className="flex items-center gap-1 text-purple-700">
+						{questionType === "multiple-choice" && (
+							<div className="border rounded p-3 mb-2 bg-purple-50 border-purple-200">
+								<ul className="mb-2">
+									{optionFields.map((opt, idx) => (
+										<li key={idx} className="flex items-center gap-2 mb-1">
+											<span>{String.fromCharCode(65 + idx)}.</span>
 											<input
-												type="checkbox"
-												checked={opt.is_correct}
+												className="border rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-purple-400"
+												value={opt.text}
 												onChange={(e) =>
-													handleOptionChange(
-														idx,
-														"is_correct",
-														e.target.checked,
-													)
+													handleOptionChange(idx, "text", e.target.value)
 												}
+												placeholder={`Option ${idx + 1}`}
+												required
 											/>
-											Correct
-										</label>
-									</li>
-								))}
-							</ul>
-							{/* Add Option button (max 4) */}
-							{optionFields.length < 4 && (
+											<label className="flex items-center gap-1 text-purple-700">
+												<input
+													type="checkbox"
+													checked={opt.is_correct}
+													onChange={(e) =>
+														handleOptionChange(
+															idx,
+															"is_correct",
+															e.target.checked,
+														)
+													}
+												/>
+												Correct
+											</label>
+										</li>
+									))}
+								</ul>
+								{/* Add Option button (max 4) */}
+								{optionFields.length < 4 && (
+									<button
+										className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 transition"
+										onClick={handleAddOptionField}
+									>
+										Add Option
+									</button>
+								)}
+							</div>
+						)}
+						<div className="flex gap-2">
+							<button
+								type="submit"
+								className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
+							>
+								{editingQuestionId ? "Save Changes" : "Save Question"}
+							</button>
+							{editingQuestionId && (
 								<button
-									className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 transition"
-									onClick={handleAddOptionField}
+									type="button"
+									className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
+									onClick={handleCancelEdit}
 								>
-									Add Option
+									Cancel
 								</button>
 							)}
 						</div>
+					</form>
+				</section>
+				{/* Render questions list from API */}
+				<div className="border p-4 rounded bg-purple-50 text-purple-700 text-center border-purple-200">
+					{questions.length === 0 ? (
+						<p className="mb-2 font-semibold">No questions yet.</p>
+					) : (
+						<>
+							<div className="font-semibold mb-2 text-purple-800">
+								Questions
+							</div>
+							<ul className="space-y-3">
+								{questions.map((q, idx) => (
+									<li
+										key={q.id}
+										className="border p-3 rounded flex justify-between items-center bg-white border-purple-200"
+									>
+										<div>
+											<span className="font-bold mr-2 text-purple-800">
+												Q{idx + 1}:
+											</span>
+											<span>{q.text}</span>
+											<span className="ml-2 text-xs text-purple-400">
+												[{q.type}]
+											</span>
+										</div>
+										<div className="flex gap-2">
+											<button
+												type="button"
+												className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 text-sm transition"
+												onClick={() => handleEditQuestion(q)}
+											>
+												Edit
+											</button>
+											<button
+												type="button"
+												className="px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-600 text-sm transition"
+												onClick={() => handleDeleteQuestion(q.id)}
+											>
+												Delete
+											</button>
+										</div>
+									</li>
+								))}
+							</ul>
+						</>
 					)}
-					<div className="flex gap-2">
-						<button
-							type="submit"
-							className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-						>
-							{editingQuestionId ? "Save Changes" : "Save Question"}
-						</button>
-						{editingQuestionId && (
-							<button
-								type="button"
-								className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-								onClick={handleCancelEdit}
-							>
-								Cancel
-							</button>
-						)}
-					</div>
-				</form>
-			</section>
-			{/* Render questions list from API */}
-			<div className="border p-4 rounded bg-purple-50 text-purple-700 text-center border-purple-200">
-				{questions.length === 0 ? (
-					<p className="mb-2 font-semibold">No questions yet.</p>
-				) : (
-					<>
-						<div className="font-semibold mb-2 text-purple-800">Questions</div>
-						<ul className="space-y-3">
-							{questions.map((q, idx) => (
-								<li
-									key={q.id}
-									className="border p-3 rounded flex justify-between items-center bg-white border-purple-200"
-								>
-									<div>
-										<span className="font-bold mr-2 text-purple-800">
-											Q{idx + 1}:
-										</span>
-										<span>{q.text}</span>
-										<span className="ml-2 text-xs text-purple-400">
-											[{q.type}]
-										</span>
-									</div>
-									<div className="flex gap-2">
-										<button
-											type="button"
-											className="px-2 py-1 bg-purple-400 text-white rounded hover:bg-purple-500 text-sm transition"
-											onClick={() => handleEditQuestion(q)}
-										>
-											Edit
-										</button>
-										<button
-											type="button"
-											className="px-2 py-1 bg-gray-400 text-white rounded hover:bg-gray-600 text-sm transition"
-											onClick={() => handleDeleteQuestion(q.id)}
-										>
-											Delete
-										</button>
-									</div>
-								</li>
-							))}
-						</ul>
-					</>
-				)}
-			</div>
-			<div className="flex gap-2 mt-6">
-				<button
-					onClick={handleFinishQuiz}
-					className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition"
-				>
-					Finish
-				</button>
-				<button
-					onClick={() => navigate("/mentor/dashboard")}
-					className="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500 transition"
-					type="button"
-				>
-					Back
-				</button>
+				</div>
 			</div>
 		</div>
 	);
