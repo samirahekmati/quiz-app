@@ -144,6 +144,19 @@ function MentorLiveQuiz() {
 		};
 	}, [quizId]);
 
+	useEffect(() => {
+		const handleQuizEnded = () => {
+			setQuizStarted(false);
+			setForceEndEnabled(false);
+			setTimer(0);
+		};
+		onEvent("quiz-ended", handleQuizEnded);
+
+		return () => {
+			offEvent("quiz-ended", handleQuizEnded);
+		};
+	}, []);
+
 	const handleForceEnd = () => {
 		emitEvent("quiz-ended", {
 			quizId,
