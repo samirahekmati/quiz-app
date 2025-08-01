@@ -20,7 +20,7 @@ function StudentQuiz() {
 	const [current, setCurrent] = useState(0);
 	const [answers, setAnswers] = useState({});
 	const [textAnswer, setTextAnswer] = useState("");
-	const [selectedOptions, setSelectedOptions] = useState([]);
+	const [selectedOptionId, setSelectedOptionId] = useState(null);
 	// Real-time timer state
 	const [timer, setTimer] = useState(null); // seconds left
 	const [quizStarted, setQuizStarted] = useState(false);
@@ -185,27 +185,19 @@ function StudentQuiz() {
 	if (!question) {
 		return <div className="p-4 text-center">No questions in this quiz.</div>;
 	}
-	const isMultiple =
-		question.type === "multiple_choice" &&
-		question.options.filter((o) => o.is_correct).length > 1;
 
 	const handleNext = (e) => {
 		e.preventDefault();
 		let newAnswers = { ...answers };
 		if (question.type === "multiple_choice") {
-			if (isMultiple) {
-				if (selectedOptions.length === 0) return;
-				newAnswers[question.id] = selectedOptions;
-			} else {
-				if (selectedOptions.length !== 1) return;
-				newAnswers[question.id] = selectedOptions[0];
-			}
+			if (selectedOptionId === null) return; // Nothing selected
+			newAnswers[question.id] = selectedOptionId;
 		} else {
 			if (!textAnswer.trim()) return;
 			newAnswers[question.id] = textAnswer.trim();
 		}
 		setAnswers(newAnswers);
-		setSelectedOptions([]);
+		setSelectedOptionId(null);
 		setTextAnswer("");
 		// Debug log for answer submission
 		console.log("submit-answer emit", {
@@ -220,11 +212,22 @@ function StudentQuiz() {
 			userId: localStorage.getItem("studentUsername") || "",
 			questionId: question.id,
 			answer: newAnswers[question.id],
+			// Add progress info for mentor view
+			questionIndex: current + 1,
+			totalQuestions: questions.length,
 		});
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);
 		} else {
-			// Wait for quiz-ended event to navigate to result page
+			// On last question, ask for confirmation to finish
+			const isFinished = window.confirm(
+				"Are you sure you want to finish the quiz?",
+			);
+			if (isFinished) {
+				navigate(`/student/result/${quizId}`, {
+					state: { totalQuestions: questions.length },
+				});
+			}
 		}
 	};
 
@@ -259,35 +262,18 @@ function StudentQuiz() {
 					<div className="mb-2">{question.text}</div>
 					{question.type === "multiple_choice" ? (
 						<div className="space-y-2">
-							{isMultiple
-								? question.options.map((opt) => (
-										<label key={opt.id} className="flex items-center gap-2">
-											<input
-												type="checkbox"
-												checked={selectedOptions.includes(opt.id)}
-												onChange={() => {
-													setSelectedOptions((prev) =>
-														prev.includes(opt.id)
-															? prev.filter((id) => id !== opt.id)
-															: [...prev, opt.id],
-													);
-												}}
-											/>
-											{opt.text}
-										</label>
-									))
-								: question.options.map((opt) => (
-										<label key={opt.id} className="flex items-center gap-2">
-											<input
-												type="radio"
-												name="option"
-												value={opt.id}
-												checked={selectedOptions[0] === opt.id}
-												onChange={() => setSelectedOptions([opt.id])}
-											/>
-											{opt.text}
-										</label>
-									))}
+							{question.options.map((opt) => (
+								<label key={opt.id} className="flex items-center gap-2">
+									<input
+										type="radio"
+										name="option"
+										value={opt.id}
+										checked={selectedOptionId === opt.id}
+										onChange={() => setSelectedOptionId(opt.id)}
+									/>
+									{opt.text}
+								</label>
+							))}
 						</div>
 					) : (
 						<input

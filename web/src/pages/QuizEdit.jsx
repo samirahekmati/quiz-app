@@ -91,13 +91,22 @@ function QuizEdit() {
 
 	// Handle change for each option field
 	const handleOptionChange = (idx, field, value) => {
-		setOptionFields((prev) =>
-			prev.map((opt, i) =>
-				i === idx
-					? { ...opt, [field]: field === "is_correct" ? value : value }
-					: opt,
-			),
-		);
+		if (field === "is_correct" && value === true) {
+			// If a checkbox is checked, uncheck all others
+			setOptionFields((prev) =>
+				prev.map((opt, i) => ({
+					...opt,
+					is_correct: i === idx,
+				})),
+			);
+		} else {
+			// Handle text change or unchecking
+			setOptionFields((prev) =>
+				prev.map((opt, i) =>
+					i === idx ? { ...opt, [field]: value } : opt,
+				),
+			);
+		}
 	};
 
 	// Add a new empty option field (max 4)
