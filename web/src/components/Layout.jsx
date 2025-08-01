@@ -14,7 +14,7 @@ export default function Layout() {
 		{ label: "Profile", section: "profile", path: "/mentor/profile" },
 		{ label: "Quizzes", section: "quizzes", path: "/mentor/dashboard" },
 		{ label: "Create New Quiz", section: "create", path: "/mentor/create" },
-		{ label: "See Quiz Results", section: "results", path: "/mentor/results" },
+		{ label: "Quiz reports", section: "reports", path: "/mentor/reports" },
 	];
 
 	// Handle logout

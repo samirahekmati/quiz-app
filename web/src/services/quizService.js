@@ -61,3 +61,18 @@ export async function updateQuiz(token, quizId, updates) {
 	if (!res.ok) throw new Error(data.message || "Failed to update quiz.");
 	return data;
 }
+
+// Fetch students for a specific quiz
+export async function fetchStudents(token, quizId) {
+	const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}/students`, {
+		headers: {
+			Authorization: `Bearer ${token}`,
+			"Content-Type": "application/json",
+		},
+	});
+	if (!res.ok)
+		throw new Error(
+			(await res.json()).message || "Failed to fetch student reports.",
+		);
+	return res.json();
+}

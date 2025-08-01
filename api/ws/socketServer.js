@@ -29,7 +29,9 @@ export async function restoreActiveQuizzes(io) {
 		const now = Date.now();
 		for (const quiz of activeQuizzes) {
 			const quizId = quiz.id;
-			const elapsed = Math.floor((now - new Date(quiz.started_at).getTime()) / 1000);
+			const elapsed = Math.floor(
+				(now - new Date(quiz.started_at).getTime()) / 1000,
+			);
 			const remaining = Math.max(0, quiz.duration - elapsed);
 
 			liveQuizzes[quizId] = { status: "started" };
@@ -139,7 +141,6 @@ export function setupSocketServer(io) {
 			socket.emit("quiz-session-created", { quizId });
 		});
 
-
 		// Listen for client disconnect
 		socket.on("disconnect", (reason) => {
 			logger.info(`[socket.io] Client disconnected: ${socket.id} (${reason})`);
@@ -197,8 +198,7 @@ export function setupSocketServer(io) {
 						}
 						// Student did not participate
 						return socket.emit("error", {
-							message:
-								"This quiz has ended and you did not participate in it.",
+							message: "This quiz has ended and you did not participate in it.",
 						});
 					} catch (err) {
 						logger.error(
@@ -369,7 +369,7 @@ export function setupSocketServer(io) {
 					if (liveQuizzes[quizId]) {
 						liveQuizzes[quizId].status = "ended";
 					}
-					
+
 					pool
 						.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
 							endedAt,
@@ -483,7 +483,7 @@ export function setupSocketServer(io) {
 			if (liveQuizzes[quizId]) {
 				liveQuizzes[quizId].status = "ended";
 			}
-			
+
 			try {
 				await pool.query(`UPDATE quizzes SET ended_at = $1 WHERE id = $2`, [
 					endedAt,

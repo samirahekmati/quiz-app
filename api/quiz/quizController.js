@@ -130,19 +130,52 @@ export async function getQuizById(req, res) {
 // Get the quiz created by a specific user by userId
 export async function getQuizzesByUser(req, res) {
 	const userId = req.user.id;
+	const includeReports = req.query.includeReports === "true";
 
 	try {
-		const result = await db.query(
-			`
-			SELECT id, title, description, duration
-			FROM quizzes
-			WHERE user_id = $1
-			ORDER BY created_at DESC
-			`,
-			[userId],
-		);
+		if (includeReports) {
+			// Get quizzes with student participation data for reports
+			const result = await db.query(
+				`
+				SELECT 
+					q.id, 
+					q.title, 
+					q.description, 
+					q.duration,
+					q.created_at,
+					q.started_at,
+					q.ended_at,
+					COUNT(DISTINCT a.username) as students_participated,
+					(SELECT COUNT(*) FROM questions WHERE quiz_id = q.id) as total_questions,
+					CASE 
+						WHEN q.ended_at IS NOT NULL THEN 'completed'
+						WHEN q.started_at IS NOT NULL AND q.ended_at IS NULL THEN 'in_progress'
+						ELSE 'not_started'
+					END as quiz_status
+				FROM quizzes q
+				LEFT JOIN answers a ON q.id = a.quiz_id
+				WHERE q.user_id = $1
+				GROUP BY q.id, q.title, q.description, q.duration, q.created_at, q.started_at, q.ended_at
+				ORDER BY q.created_at DESC
+				`,
+				[userId],
+			);
 
-		res.json(result.rows);
+			res.json(result.rows);
+		} else {
+			// Original query for dashboard (existing functionality)
+			const result = await db.query(
+				`
+				SELECT id, title, description, duration
+				FROM quizzes
+				WHERE user_id = $1
+				ORDER BY created_at DESC
+				`,
+				[userId],
+			);
+
+			res.json(result.rows);
+		}
 	} catch (error) {
 		logger.error("Error fetching quizzes by user:", error);
 		res
@@ -249,5 +282,61 @@ export async function updateQuiz(req, res) {
 		res.status(500).json({ message: "Internal server error" });
 	} finally {
 		client.release();
+	}
+}
+
+// get all students who have taken a quiz with detailed reports
+// Route: GET /api/quizzes/:quizId/students
+export async function getQuizStudents(req, res) {
+	const { quizId } = req.params;
+
+	try {
+		// Get detailed question/answer breakdown
+		const detailsResult = await db.query(
+			`
+			SELECT 
+				a.username,
+				q.text as question_text,
+				o.text as student_answer,
+				o.is_correct,
+				a.submitted_at
+			FROM answers a
+			JOIN questions q ON a.question_id = q.id
+			JOIN options o ON a.question_id = o.question_id AND a.selected_option = o.id::text
+			WHERE a.quiz_id = $1
+			ORDER BY a.username, a.question_id
+		`,
+			[quizId],
+		);
+
+		// Get summary counts for each student
+		const summaryResult = await db.query(
+			`
+			SELECT 
+				a.username,
+				COUNT(CASE WHEN o.is_correct THEN 1 END) as correct_answers,
+				COUNT(CASE WHEN o.is_correct = false THEN 1 END) as incorrect_answers,
+				COUNT(*) as total_answers
+			FROM answers a
+			JOIN options o ON a.question_id = o.question_id AND a.selected_option = o.id::text
+			WHERE a.quiz_id = $1
+			GROUP BY a.username
+			ORDER BY a.username
+		`,
+			[quizId],
+		);
+
+		// Combine the data
+		const response = {
+			summary: summaryResult.rows,
+			details: detailsResult.rows,
+		};
+
+		res.json(response);
+	} catch (error) {
+		logger.error("Error fetching quiz students:", error);
+		res
+			.status(500)
+			.json({ message: "Server error while fetching quiz students" });
 	}
 }
