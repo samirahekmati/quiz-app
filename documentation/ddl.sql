@@ -27,7 +27,11 @@ CREATE TABLE public.quizzes (
 	description text NULL,
 	duration int4 NOT NULL,
 	created_at timestamp DEFAULT CURRENT_TIMESTAMP NULL,
+	user_id int4 NULL,
+	started_at timestamp NULL,
+	ended_at timestamp NULL,
 	CONSTRAINT quizzes_pkey PRIMARY KEY (id)
+	CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
 
 
