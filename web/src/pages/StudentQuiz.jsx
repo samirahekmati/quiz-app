@@ -220,6 +220,9 @@ function StudentQuiz() {
 			userId: localStorage.getItem("studentUsername") || "",
 			questionId: question.id,
 			answer: newAnswers[question.id],
+			// Add progress info for mentor view
+			questionIndex: current + 1,
+			totalQuestions: questions.length,
 		});
 		if (current < questions.length - 1) {
 			setCurrent(current + 1);

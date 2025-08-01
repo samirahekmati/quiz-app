@@ -9,14 +9,19 @@ import {
 	registerReconnectHandler,
 } from "../services/socket";
 
-function LiveQuizSection({ quizId, mentorId }) {
+function LiveQuizSection({ quizId, mentorId, initialProgress }) {
 	// State for students, progress, quiz status, and error
 	const [students, setStudents] = useState([]);
 	const [roomUsersError, setRoomUsersError] = useState("");
-	const [progress, setProgress] = useState({});
+	const [progress, setProgress] = useState(initialProgress || {});
 	const [quizStatusMsg, setQuizStatusMsg] = useState("");
 	const [quizError, setQuizError] = useState("");
 	const [showQuizError, setShowQuizError] = useState(false);
+
+	// Sync progress state
+	useEffect(() => {
+		setProgress(initialProgress || {});
+	}, [initialProgress]);
 
 	// Connect socket and join quiz room when quizId changes
 	useEffect(() => {
@@ -42,45 +47,19 @@ function LiveQuizSection({ quizId, mentorId }) {
 		// Listen for progress-update event (live student answers)
 		const handleProgressUpdate = (data) => {
 			console.log("[LiveQuizSection] progress-update event:", data);
-			if (!data || !data.userId || !data.questionId) return;
-			setProgress((prev) => {
-				const userProgress = prev[data.userId] || {};
-				return {
-					...prev,
-					[data.userId]: {
-						...userProgress,
-						[data.questionId]: {
-							answer: data.answer,
-							timestamp: data.timestamp,
-						},
-					},
-				};
-			});
+			if (!data || !data.userId) return;
+			setProgress((prev) => ({
+				...prev,
+				[data.userId]: {
+					current: data.questionIndex,
+					total: data.totalQuestions,
+					status: data.status,
+				},
+			}));
 		};
 		onEvent("progress-update", handleProgressUpdate);
 
-		// Listen for full-progress-update event (on reconnect)
-		const handleFullProgressUpdate = (data) => {
-			if (data && Array.isArray(data.answers)) {
-				const fullProgress = {};
-				data.answers.forEach((ans) => {
-					const userProgress = fullProgress[ans.username] || {};
-					fullProgress[ans.username] = {
-						...userProgress,
-						[ans.question_id]: {
-							answer: ans.selected_option,
-							timestamp: ans.submitted_at,
-						},
-					};
-				});
-				setProgress(fullProgress);
-				console.log(
-					"[LiveQuizSection] Full progress hydrated:",
-					fullProgress,
-				);
-			}
-		};
-		onEvent("full-progress-update", handleFullProgressUpdate);
+		// FullProgressUpdate MOVED TO MentorLiveQuiz.jsx
 
 		// Listen for quiz-started event
 		const handleQuizStarted = (data) => {
@@ -117,7 +96,7 @@ function LiveQuizSection({ quizId, mentorId }) {
 			offEvent("room-users", handleRoomUsers);
 			offEvent("error", handleRoomUsersError);
 			offEvent("progress-update", handleProgressUpdate);
-			offEvent("full-progress-update", handleFullProgressUpdate);
+			// offEvent("full-progress-update", handleFullProgressUpdate);
 			offEvent("quiz-started", handleQuizStarted);
 			offEvent("quiz-ended", handleQuizEnded);
 			offEvent("error", handleQuizError);
@@ -165,47 +144,56 @@ function LiveQuizSection({ quizId, mentorId }) {
 					))}
 				</ul>
 			)}
-			{/* Live Progress Table */}
+			{/* Live Progress */}
 			<div className="mt-6">
 				<div className="font-semibold mb-2">Live Progress</div>
 				{students.length === 0 ? (
 					<div className="text-gray-500 text-sm">No progress to show.</div>
 				) : (
-					<table className="w-full text-xs border">
-						<thead>
-							<tr>
-								<th className="border px-2 py-1">Student</th>
-								<th className="border px-2 py-1">Question</th>
-								<th className="border px-2 py-1">Answer</th>
-								<th className="border px-2 py-1">Time</th>
-							</tr>
-						</thead>
-						<tbody>
-							{students.map((s, idx) =>
-								progress[s.userId] ? (
-									Object.entries(progress[s.userId]).map(([qId, p]) => (
-										<tr key={s.userId + qId}>
-											<td className="border px-2 py-1">{s.userId}</td>
-											<td className="border px-2 py-1">{qId}</td>
-											<td className="border px-2 py-1">{p.answer}</td>
-											<td className="border px-2 py-1">
-												{p.timestamp
-													? new Date(p.timestamp).toLocaleTimeString()
-													: "-"}
-											</td>
-										</tr>
-									))
-								) : (
-									<tr key={s.userId + "-none-" + idx}>
-										<td className="border px-2 py-1">{s.userId}</td>
-										<td className="border px-2 py-1" colSpan={3}>
-											No answers yet
-										</td>
-									</tr>
-								),
-							)}
-						</tbody>
-					</table>
+					<ul className="space-y-2">
+						{students.map((s) => {
+							const studentProgress = progress[s.userId];
+							let statusText = "Not started";
+							let width = "0%";
+							let bgColor = "bg-gray-300";
+
+							if (studentProgress) {
+								if (studentProgress.status === "completed") {
+									statusText = `Completed`;
+									width = "100%";
+									bgColor = "bg-green-500";
+								} else {
+									statusText = `${studentProgress.current} / ${studentProgress.total}`;
+									width = `${
+										(studentProgress.current / studentProgress.total) * 100
+									}%`;
+									bgColor = "bg-blue-500";
+								}
+							}
+
+							return (
+								<li
+									key={s.userId}
+									className="p-3 rounded-lg bg-white shadow border border-gray-200"
+								>
+									<div className="flex justify-between items-center mb-1">
+										<span className="font-medium text-gray-800">
+											{s.userId}
+										</span>
+										<span className="text-sm font-mono text-gray-600">
+											{statusText}
+										</span>
+									</div>
+									<div className="w-full bg-gray-200 rounded-full h-2.5">
+										<div
+											className={`${bgColor} h-2.5 rounded-full transition-all duration-500`}
+											style={{ width: width }}
+										></div>
+									</div>
+								</li>
+							);
+						})}
+					</ul>
 				)}
 			</div>
 		</div>
@@ -216,6 +204,7 @@ LiveQuizSection.propTypes = {
 	quizId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]).isRequired,
 	mentorId: PropTypes.oneOfType([PropTypes.string, PropTypes.number])
 		.isRequired,
+	initialProgress: PropTypes.object,
 };
 
 export default LiveQuizSection;
