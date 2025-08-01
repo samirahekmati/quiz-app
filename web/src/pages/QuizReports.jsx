@@ -4,19 +4,18 @@ import getApiBaseUrl from "../services/apiBaseUrl";
 
 function QuizReports() {
 	const [quizzes, setQuizzes] = useState([]);
-	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
+	// state for the selected quiz
+	const [selectedQuiz, setSelectedQuiz] = useState(null);
 
 	useEffect(() => {
 		async function fetchQuizReports() {
-			setLoading(true);
 			setError("");
 
 			// Check if user is logged in
 			const token = localStorage.getItem("token");
 			if (!token) {
 				setError("Not authenticated");
-				setLoading(false);
 				return;
 			}
 
@@ -39,23 +38,14 @@ function QuizReports() {
 				}
 			} catch {
 				setError("Network error. Please try again.");
-			} finally {
-				setLoading(false);
 			}
 		}
 
 		fetchQuizReports();
 	}, []);
 
-	if (loading) {
-		return (
-			<div className="p-6">
-				<h1 className="text-2xl font-bold mb-6">Quiz Reports</h1>
-				<div className="text-center py-8">
-					<p>Loading quiz reports...</p>
-				</div>
-			</div>
-		);
+	async function handleQuizClick(quizId) {
+		setSelectedQuiz(quizId);
 	}
 
 	if (error) {
@@ -70,29 +60,49 @@ function QuizReports() {
 	}
 
 	return (
-		<div className="p-6">
-			<h1 className="text-2xl font-bold mb-6">Quiz Reports</h1>
-			<div className="grid gap-4">
-				{quizzes
-					.filter((quiz) => quiz.quiz_status === "completed")
-					.map((quiz) => (
-						<div
-							key={quiz.id}
-							className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer"
-						>
-							<h3 className="text-lg font-semibold">{quiz.title}</h3>
-							<p className="text-gray-600">{quiz.description}</p>
-							<div className="mt-2 text-sm text-gray-500">
-								<span className="mr-4">
-									Students: {quiz.students_participated || 0}
-								</span>
-								<span className="mr-4">
-									Questions: {quiz.total_questions || 0}
-								</span>
-							</div>
-						</div>
-					))}
-			</div>
+		<div className="max-w-5xl mx-auto">
+			{!selectedQuiz ? (
+				<>
+					<h2 className="text-2xl font-bold mb-6 text-purple-800">
+						Quiz Reports
+					</h2>
+					<div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+						{quizzes
+							.filter((quiz) => quiz.quiz_status === "completed")
+							.map((quiz) => (
+								<button
+									key={quiz.id}
+									type="button"
+									onClick={() => handleQuizClick(quiz.id)}
+									className="bg-orange-100 rounded-lg shadow p-6 border border-orange-200 relative w-full text-left hover:scale-105 transition-transform focus:outline-none"
+									aria-label={`View quiz ${quiz.title}`}
+								>
+									<h2 className="text-lg font-bold text-orange-900 mb-2">
+										{quiz.title}
+									</h2>
+									<p className="text-orange-700 mb-2">{quiz.description}</p>
+									<div className="flex justify-between items-center mt-4">
+										<span className="bg-orange-500 text-white px-2 py-1 rounded text-xs">
+											Students: {quiz.students_participated || 0}
+										</span>
+										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
+											{quiz.total_questions || 0} questions
+										</span>
+									</div>
+								</button>
+							))}
+					</div>
+				</>
+			) : (
+				<div>
+					<button
+						onClick={() => setSelectedQuiz(null)}
+						className="mb-6 px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+					>
+						← Back to Quiz Reports
+					</button>
+				</div>
+			)}
 		</div>
 	);
 }
