@@ -1,4 +1,5 @@
 import { pool } from "../db.js";
+import logger from "../utils/logger.js";
 
 export const getQuizResult = async (req, res) => {
   const { quizId } = req.params;
@@ -15,7 +16,7 @@ export const getQuizResult = async (req, res) => {
       SELECT a.question_id, a.selected_option, o.is_correct
       FROM answers a
       JOIN options o
-      ON a.question_id = o.question_id AND a.selected_option = o.text
+      ON a.question_id = o.question_id AND a.selected_option::int = o.id
       WHERE a.username = $1 AND a.quiz_id = $2;
       `,
       [username, quizId]
