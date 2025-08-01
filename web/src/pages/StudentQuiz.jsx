@@ -9,6 +9,7 @@ import {
 	offEvent,
 	registerReconnectHandler,
 } from "../services/socket";
+import { formatTime } from "../services/timeFormatter";
 
 function StudentQuiz() {
 	const { quizId } = useParams();
@@ -248,8 +249,8 @@ function StudentQuiz() {
 		<div className="p-4 max-w-md mx-auto">
 			{errorAlert}
 			<h1 className="text-2xl font-bold mb-4">Quiz: {quiz.title}</h1>
-			<div className="mb-2 text-right font-mono">
-				Time left: {timer !== null ? timer : "-"}s
+			<div className="mb-2 text-right font-mono text-lg">
+				Time left: {formatTime(timer)}
 			</div>
 			{answerStatus && (
 				<div className="text-green-600 text-sm mb-2">{answerStatus}</div>

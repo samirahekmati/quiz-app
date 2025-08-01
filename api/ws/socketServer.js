@@ -381,7 +381,7 @@ export function setupSocketServer(io) {
 								err,
 							),
 						);
-				}, duration * 1000),
+				}, (duration+1) * 1000),
 			};
 			// Broadcast to all clients in the room that the quiz has started
 			io.to(quizId).emit("quiz-started", { startedAt, duration });
