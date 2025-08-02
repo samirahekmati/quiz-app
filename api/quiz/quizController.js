@@ -69,7 +69,7 @@ export async function getQuizById(req, res) {
 		const result = await db.query(
 			`
 		SELECT 
-		  q.id as quiz_id, q.title, q.description, q.duration,
+		  q.id as quiz_id, q.title, q.description, q.duration, q.ended_at,
 		  qs.id as question_id, qs.text as question_text, qs.type,
 		  o.id as option_id, o.text as option_text, o.is_correct
 		FROM quizzes q
@@ -92,6 +92,7 @@ export async function getQuizById(req, res) {
 			title: base.title,
 			description: base.description,
 			duration: base.duration,
+			ended_at: base.ended_at,
 			questions: [],
 		};
 

@@ -149,6 +149,10 @@ function MentorLiveQuiz() {
 			setQuizStarted(false);
 			setForceEndEnabled(false);
 			setTimer(0);
+			setQuizDetail((prevDetail) => ({
+				...prevDetail,
+				ended_at: new Date().toISOString(),
+			}));
 		};
 		onEvent("quiz-ended", handleQuizEnded);
 
@@ -185,26 +189,32 @@ function MentorLiveQuiz() {
 				Live Quiz Session for: {quizDetail?.title || "..."}
 			</h1>
 
-			{!quizStarted && (
-				<div className="mb-6 p-4 border rounded-lg bg-gray-50">
-					<p className="font-semibold mb-2 text-gray-700">
-						Invite students to join:
-					</p>
-					<div className="flex items-center space-x-2">
-						<input
-							type="text"
-							value={inviteLink}
-							readOnly
-							className="w-full px-2 py-1 border rounded bg-gray-200 text-gray-600"
-						/>
-						<button
-							onClick={copyToClipboard}
-							className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
-						>
-							{copied ? "Copied!" : "Copy"}
-						</button>
-					</div>
+			{quizDetail?.ended_at ? (
+				<div className="mb-6 p-4 border rounded-lg bg-orange-200 text-orange-800">
+					This quiz has already been completed.
 				</div>
+			) : (
+				!quizStarted && (
+					<div className="mb-6 p-4 border rounded-lg bg-gray-50">
+						<p className="font-semibold mb-2 text-gray-700">
+							Invite students to join:
+						</p>
+						<div className="flex items-center space-x-2">
+							<input
+								type="text"
+								value={inviteLink}
+								readOnly
+								className="w-full px-2 py-1 border rounded bg-gray-200 text-gray-600"
+							/>
+							<button
+								onClick={copyToClipboard}
+								className="px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600 transition"
+							>
+								{copied ? "Copied!" : "Copy"}
+							</button>
+						</div>
+					</div>
+				)
 			)}
 
 			{quizStarted && (
@@ -213,7 +223,7 @@ function MentorLiveQuiz() {
 				</div>
 			)}
 			<div className="mb-4 flex gap-2">
-				{!quizStarted && (
+				{!quizStarted && !quizDetail?.ended_at && (
 					<button
 						className="px-4 py-2 bg-green-600 text-white rounded"
 						onClick={handleStartQuiz}
