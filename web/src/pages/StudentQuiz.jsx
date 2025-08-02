@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router";
+import { useParams, useNavigate, useLocation } from "react-router";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
 import {
@@ -14,6 +14,7 @@ import { formatTime } from "../services/timeFormatter";
 function StudentQuiz() {
 	const { quizId } = useParams();
 	const navigate = useNavigate();
+	const location = useLocation();
 	const [quiz, setQuiz] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState("");
@@ -26,6 +27,9 @@ function StudentQuiz() {
 	const [timer, setTimer] = useState(null); // seconds left
 	const [quizStarted, setQuizStarted] = useState(false);
 	const [answerStatus, setAnswerStatus] = useState(""); // confirmation message
+
+	// Get quiz info from navigation state if available
+	const quizInfoFromNav = location.state?.quizInfo;
 
 	useEffect(() => {
 		async function fetchQuiz() {
@@ -162,7 +166,7 @@ function StudentQuiz() {
 	}, [quizId, navigate, quiz?.questions]);
 
 	if (loading) {
-		return <div className="p-4 text-center">Loading quiz...</div>;
+		return <div className="min-h-screen bg-gradient-to-br from-green-400 to-cyan-500 flex flex-col items-center justify-center p-4 text-black p-4 text-center font-bold text-2xl">Loading quiz...</div>;
 	}
 	// Show error alert at the top (dismissable)
 	const errorAlert = showError && error && (
@@ -178,13 +182,13 @@ function StudentQuiz() {
 		</div>
 	);
 	if (!quiz) {
-		return <div className="p-4 text-center text-red-600">Quiz not found.</div>;
+		return <div className="min-h-screen bg-gradient-to-br from-green-400 to-cyan-500 flex flex-col items-center justify-center p-4 text-black p-4 text-center text-red-600 font-bold text-2xl">Quiz not found.</div>;
 	}
 
 	const questions = quiz.questions || [];
 	const question = questions[current];
 	if (!question) {
-		return <div className="p-4 text-center">No questions in this quiz.</div>;
+		return <div className="min-h-screen bg-gradient-to-br from-green-400 to-cyan-500 flex flex-col items-center justify-center p-4 text-black p-4 text-center font-bold text-2xl">No questions in this quiz.</div>;
 	}
 
 	const handleNext = (e) => {
@@ -234,21 +238,30 @@ function StudentQuiz() {
 
 	// Show waiting page if quiz not started
 	if (!quizStarted) {
+		const waitingInfo = quizInfoFromNav || quiz;
 		return (
 			<div className="min-h-screen bg-gradient-to-br from-green-400 to-cyan-500 flex flex-col items-center justify-center p-4 text-black">
 				{errorAlert}
-				<div className="bg-white bg-opacity-20 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-center">
-					<h1 className="text-3xl font-bold mb-4">
-						Quiz: {quiz?.title || "Loading..."}
+				<div className="bg-green-100 bg-opacity-20 backdrop-blur-lg rounded-2xl shadow-2xl p-8 text-center max-w-lg w-full">
+					<h1 className="text-2xl font-bold mb-4">
+						Quiz: {waitingInfo?.title || "Loading..."}
 					</h1>
-					<br />
-					<p className="text-lg mb-6">
-						Waiting for the mentor to start the quiz.
-						<br />
-						Please stay on this page...
-					</p>
+					{waitingInfo?.description && (
+						<p className="text-xl mb-4">{waitingInfo.description}</p>
+					)}
+					{waitingInfo?.duration && (
+						<div className="text-m p-2 rounded-lg bg-opacity-10 inline-block">
+							Duration: {Math.round(waitingInfo.duration / 60)} minutes
+						</div>
+					)}
+					<hr className="my-5" />
+					<div className="text-lg mb-8 text-black-200">
+						Waiting for the mentor to start the quiz...
+						<br /><br />
+						<span className="font-bold text-green-600 text-xl">Please stay on this page</span>
+					</div>
 					{/* Simple CSS spinner */}
-					<div className="w-12 h-12 border-4 border-white border-t-transparent border-solid rounded-full animate-spin mx-auto"></div>
+					<div className="w-12 h-12 border-4 border-green-500 border-t-transparent border-solid rounded-full animate-spin mx-auto"></div>
 				</div>
 			</div>
 		);

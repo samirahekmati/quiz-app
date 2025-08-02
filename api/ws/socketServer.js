@@ -11,7 +11,7 @@ import logger from "../utils/logger.js";
 // In-memory timer state for each quiz (quizId)
 const quizTimers = {};
 // In-memory store for active quiz sessions (quizId)
-const liveQuizzes = {};
+export const liveQuizzes = {};
 
 // Restores active quiz sessions from the database
 export async function restoreActiveQuizzes(io) {
