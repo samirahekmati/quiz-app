@@ -10,9 +10,9 @@ export default function Home() {
 				{/* Left section: logo/branding/illustration */}
 				<div className="flex flex-col items-center justify-center p-8 w-96">
 					<img src={mentoroLogo} alt="Mentoro Logo" className="w-96 mb-8" />
-					<p className="text-white text-lg mb-8 text-center max-w-xs">
-						Lorem ipsum dolor sit amet, consectetuer adipiscing elit, sed diam
-						nonummy nibh euismod tincidunt ut laoreet dolore
+					<p className="text-white text-lg mb-8 text-left max-w-xs">
+						Create live quizzes, track progress in real-time and turn learning
+						moments into a fun experience.
 					</p>
 					<img
 						src={quizIllustration}
