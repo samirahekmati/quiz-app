@@ -70,22 +70,22 @@ function QuizDetail() {
 				<div className="bg-purple-100 p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 relative">
 					{/* Start this quiz button */}
 					<button
-						className="absolute left-8 top-8 px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-700 transition font-semibold"
+						className="absolute left-5 top-8 px-4 py-2 bg-green-500 text-white rounded shadow hover:bg-green-700 transition font-semibold"
 						onClick={() => navigate(`/mentor/live/${quizDetail.id}`)}
 					>
 						Run this Quiz
 					</button>
 					{/* Edit this quiz button + Delete (container) */}
-					<div className="absolute right-8 top-8 flex items-center space-x-4">
+					<div className="absolute right-5 top-8 flex flex-col sm:flex-row items-center space-y-2 sm:space-y-0 sm:space-x-4">
 						<button
-							className="px-4 py-2 bg-red-500 text-white rounded shadow hover:bg-red-700 transition font-semibold"
+							className="px-4 py-2 bg-red-500 text-white rounded shadow hover:bg-red-700 transition font-semibold w-full sm:w-auto"
 							onClick={() => handleDeleteQuiz(quizDetail.id)}
 							disabled={deletingQuizId === quizDetail.id}
 						>
 							{deletingQuizId === quizDetail.id ? "Deleting..." : "Delete Quiz"}
 						</button>
 						<button
-							className="px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold"
+							className="px-4 py-2 bg-purple-500 text-white rounded shadow hover:bg-purple-700 transition font-semibold w-full sm:w-auto"
 							onClick={() => navigate(`/mentor/quiz/${quizDetail.id}/edit`)}
 						>
 							Edit this quiz
