@@ -8,6 +8,7 @@ import CreateQuiz from "./pages/CreateQuiz.jsx";
 import Home from "./pages/Home.jsx";
 import MentorLiveQuiz from "./pages/MentorLiveQuiz.jsx";
 import MentorLogin from "./pages/MentorLogin.jsx";
+import MentorProfile from "./pages/MentorProfile.jsx";
 import MentorSignup from "./pages/MentorSignup.jsx";
 import QuizDashboard from "./pages/QuizDashboard.jsx";
 import QuizDetail from "./pages/QuizDetail.jsx";
@@ -43,7 +44,7 @@ function App() {
 				<Route path="quiz/:quizId/edit" element={<QuizEdit />} />
 				<Route path="live/:quizId" element={<MentorLiveQuiz />} />
 				<Route path="create" element={<CreateQuiz />} />
-				<Route path="profile" element={<div>Profile Page</div>} />
+				<Route path="profile" element={<MentorProfile />} />
 				<Route path="reports" element={<QuizReports />} />
 			</Route>
 		</Routes>
