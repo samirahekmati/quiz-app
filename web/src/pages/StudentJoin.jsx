@@ -184,7 +184,7 @@ function StudentJoin() {
 						)}
 						<button
 							type="submit"
-							className="w-full px-4 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-300 transform hover:scale-105"
+							className="btn-student"
 							disabled={loading}
 						>
 							{loading ? "Joining..." : "Join the Quiz!"}
@@ -192,7 +192,7 @@ function StudentJoin() {
 					</form>
 				</div>
 				<button
-					className="mt-6 w-full px-4 py-2 text-green rounded-lg hover:bg-white hover:bg-opacity-20 transition"
+					className="btn-secondary mt-5"
 					type="button"
 					onClick={() => navigate("/")}
 				>

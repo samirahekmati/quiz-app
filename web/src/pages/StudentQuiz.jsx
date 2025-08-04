@@ -329,7 +329,7 @@ function StudentQuiz() {
 						</div>
 						<button
 							type="submit"
-							className="w-full px-4 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-300 transform hover:scale-105"
+							className="btn-student"
 						>
 							{current < questions.length - 1 ? "Next Question" : "Finish Quiz"}
 						</button>

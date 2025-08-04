@@ -92,7 +92,7 @@ function StudentResult() {
 					</div>
 				)}
 				<button
-					className="mt-4 px-4 py-2 bg-green-700 text-white rounded hover:bg-green-800 transition"
+					className="btn-secondary mt-4"
 					onClick={() => navigate("/student/join")}
 				>
 					Back to Join
