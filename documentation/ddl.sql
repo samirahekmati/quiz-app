@@ -30,6 +30,7 @@ CREATE TABLE public.quizzes (
 	user_id int4 NULL,
 	started_at timestamp NULL,
 	ended_at timestamp NULL,
+	passing_score int4 NOT NULL,
 	CONSTRAINT quizzes_pkey PRIMARY KEY (id)
 	CONSTRAINT fk_user FOREIGN KEY (user_id) REFERENCES public.users(id)
 );
