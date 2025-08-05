@@ -10,6 +10,7 @@ function CreateQuiz() {
 	const [title, setTitle] = useState("");
 	const [description, setDescription] = useState("");
 	const [duration, setDuration] = useState(""); // in minutes
+	const [passScore, setPassingScore] = useState("");
 	const [error, setError] = useState("");
 	const [loading, setLoading] = useState(false);
 
@@ -28,10 +29,12 @@ function CreateQuiz() {
 				title: title.trim(),
 				description: description.trim(),
 				duration: Number(duration) * 60,
+				passingScore: Number(passScore),
 			});
 			setTitle("");
 			setDescription("");
 			setDuration("");
+			setPassingScore("");
 			navigate(`/mentor/quiz/${data.quiz.id}/edit`);
 		} catch (err) {
 			setError(err.message || "Failed to create quiz.");
@@ -95,12 +98,26 @@ function CreateQuiz() {
 						required
 					/>
 				</div>
+				<div>
+					<label
+						htmlFor="passing_score"
+						className="block font-medium mb-1 text-purple-700"
+					>
+						Passing score (Enter a percentage between 0 and 100.)
+					</label>
+					<input
+						id="passing_score"
+						className="border rounded px-2 py-1 w-32 focus:outline-none focus:ring-2 focus:ring-purple-400"
+						type="number"
+						min="0"
+						max="100"
+						value={passScore}
+						onChange={(e) => setPassingScore(e.target.value)}
+						required
+					/>
+				</div>
 				{error && <div className="text-red-500 text-sm">{error}</div>}
-				<button
-					type="submit"
-					className="w-full px-4 py-2 rounded bg-purple-600 text-white font-semibold hover:bg-purple-700 transition"
-					disabled={loading}
-				>
+				<button type="submit" className="btn-primary" disabled={loading}>
 					{loading ? "Creating..." : "Create Quiz"}
 				</button>
 			</form>
