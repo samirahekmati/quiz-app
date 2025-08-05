@@ -12,6 +12,12 @@ const createQuizSchema = z.object({
 	duration: z
 		.number({ invalid_type_error: "Duration must be a number." })
 		.positive("Duration must be a positive number."),
+	passingScore: z
+		.number({
+			invalid_type_error: "Passing score must be a number between 0 to 100.",
+		})
+		.min(0, "Passing score must at least be 0")
+		.max(100, "Passing score cannot exceed 100."),
 });
 
 // Create a new quiz
@@ -19,8 +25,9 @@ export async function createQuiz(req, res) {
 	// Validate req.body using Zod
 	const parseResult = createQuizSchema.safeParse({
 		...req.body,
-		// Make sure to convert duration to a number since it might come as string
+		// convert duration and passing score to a number since it might come as string
 		duration: Number(req.body.duration),
+		passingScore: Number(req.body.passingScore),
 	});
 
 	if (!parseResult.success) {
@@ -32,7 +39,7 @@ export async function createQuiz(req, res) {
 		return res.status(400).json({ message: errorMessage });
 	}
 
-	const { title, description, duration } = parseResult.data;
+	const { title, description, duration, passingScore } = parseResult.data;
 
 	// Get user ID from request ( auth middleware sets req.user)
 	const userId = req.user?.id;
@@ -42,10 +49,10 @@ export async function createQuiz(req, res) {
 
 	try {
 		const result = await db.query(
-			`INSERT INTO quizzes (title, description, duration,user_id)
-			 VALUES ($1, $2, $3, $4)
-			 RETURNING id, title, description, duration,user_id`,
-			[title, description, duration, userId],
+			`INSERT INTO quizzes (title, description, duration,user_id, passing_score)
+			 VALUES ($1, $2, $3, $4, $5)
+			 RETURNING id, title, description, duration,user_id, passing_score`,
+			[title, description, duration, userId, passingScore],
 		);
 
 		const newQuiz = result.rows[0];
