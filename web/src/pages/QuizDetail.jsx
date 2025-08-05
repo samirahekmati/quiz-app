@@ -98,6 +98,9 @@ function QuizDetail() {
 					<div className="mb-4 text-sm text-purple-400">
 						Duration: {Math.round(quizDetail.duration / 60)} min
 					</div>
+					<div className="mb-4 text-sm text-purple-400">
+						Passing score: {quizDetail.passingScore}
+					</div>
 					<h3 className="text-lg font-semibold mb-4 text-purple-700">
 						Questions & Answers
 					</h3>
