@@ -12,6 +12,7 @@ function QuizEdit() {
 	const [quizTitle, setQuizTitle] = useState("");
 	const [quizDescription, setQuizDescription] = useState("");
 	const [quizDuration, setQuizDuration] = useState(0);
+	const [quizPassingScore, setPassingScore] = useState("");
 	const [saving, setSaving] = useState(false);
 	const [saveMsg, setSaveMsg] = useState("");
 
@@ -54,6 +55,7 @@ function QuizEdit() {
 				title: quizTitle,
 				description: quizDescription,
 				duration: quizDuration,
+				passingScore: quizPassingScore,
 			});
 			setSaveMsg("Quiz updated successfully!");
 		} catch {
@@ -78,6 +80,7 @@ function QuizEdit() {
 					setQuizTitle(data.title || "");
 					setQuizDescription(data.description || "");
 					setQuizDuration(data.duration || 0);
+					setPassingScore(data.passingScore || 0);
 				}
 			} catch {
 				setError("Network error. Please try again.");
@@ -102,9 +105,7 @@ function QuizEdit() {
 		} else {
 			// Handle text change or unchecking
 			setOptionFields((prev) =>
-				prev.map((opt, i) =>
-					i === idx ? { ...opt, [field]: value } : opt,
-				),
+				prev.map((opt, i) => (i === idx ? { ...opt, [field]: value } : opt)),
 			);
 		}
 	};
@@ -280,7 +281,6 @@ function QuizEdit() {
 								value={quizDescription}
 								onChange={(e) => setQuizDescription(e.target.value)}
 								className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
-								required
 							/>
 						</div>
 						<div className="mb-4">
@@ -298,6 +298,24 @@ function QuizEdit() {
 								className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
 								required
 								min={1}
+							/>
+						</div>
+						<div className="mb-4">
+							<label
+								htmlFor="passing_score"
+								className="block mb-1 text-purple-700"
+							>
+								Passing score (Enter a percentage between 0 and 100.)
+							</label>
+							<input
+								id="passing_score"
+								type="number"
+								value={quizPassingScore}
+								onChange={(e) => setPassingScore(e.target.value)}
+								className="w-full p-2 border rounded  bg-purple-50 border-purple-200"
+								required
+								min={0}
+								max={100}
 							/>
 						</div>
 						<button
