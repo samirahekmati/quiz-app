@@ -76,7 +76,7 @@ export async function getQuizById(req, res) {
 		const result = await db.query(
 			`
 		SELECT 
-		  q.id as quiz_id, q.title, q.description, q.duration,
+		  q.id as quiz_id, q.title, q.description, q.passing_score, q.duration,
 		  qs.id as question_id, qs.text as question_text, qs.type,
 		  o.id as option_id, o.text as option_text, o.is_correct
 		FROM quizzes q
@@ -99,6 +99,7 @@ export async function getQuizById(req, res) {
 			title: base.title,
 			description: base.description,
 			duration: base.duration,
+			passingScore: base.passing_score,
 			questions: [],
 		};
 
@@ -149,6 +150,7 @@ export async function getQuizzesByUser(req, res) {
 					q.title, 
 					q.description, 
 					q.duration,
+					q.passing_score,
 					q.created_at,
 					q.started_at,
 					q.ended_at,
@@ -162,7 +164,7 @@ export async function getQuizzesByUser(req, res) {
 				FROM quizzes q
 				LEFT JOIN answers a ON q.id = a.quiz_id
 				WHERE q.user_id = $1
-				GROUP BY q.id, q.title, q.description, q.duration, q.created_at, q.started_at, q.ended_at
+				GROUP BY q.id, q.title, q.description, q.duration, q.passing_score, q.created_at, q.started_at, q.ended_at
 				ORDER BY q.created_at DESC
 				`,
 				[userId],
@@ -173,7 +175,7 @@ export async function getQuizzesByUser(req, res) {
 			// Original query for dashboard (existing functionality)
 			const result = await db.query(
 				`
-				SELECT id, title, description, duration
+				SELECT id, title, description, duration, passing_score
 				FROM quizzes
 				WHERE user_id = $1
 				ORDER BY created_at DESC
@@ -229,11 +231,17 @@ export const updateQuizSchema = z.object({
 	title: z.string().min(1, "Title is required").optional(),
 	description: z.string().min(1, "Description is required").optional(),
 	duration: z.number().min(1, "Duration must be a positive number").optional,
+	passingScore: z
+		.number({
+			invalid_type_error: "Passing score must be a number between 0 to 100.",
+		})
+		.min(0, "Passing score must at least be 0")
+		.max(100, "Passing score cannot exceed 100."),
 });
 
 export async function updateQuiz(req, res) {
 	const { quizId } = req.params;
-	const { title, description, duration } = req.body;
+	const { title, description, duration, passingScore } = req.body;
 
 	if (!quizId || isNaN(Number(quizId))) {
 		return res
@@ -262,6 +270,8 @@ export async function updateQuiz(req, res) {
 			description !== undefined ? description : existingQuiz.description;
 		const updatedDuration =
 			duration !== undefined ? duration : existingQuiz.duration;
+		const updatedScore =
+			passingScore !== undefined ? passingScore : existingQuiz.passing_score;
 
 		// Validate required fields after merge
 		if (!updatedTitle || updatedTitle.trim() === "") {
@@ -279,8 +289,8 @@ export async function updateQuiz(req, res) {
 
 		// Update quiz record
 		await client.query(
-			`UPDATE quizzes SET title = $1, description = $2, duration = $3 WHERE id = $4`,
-			[updatedTitle, updatedDescription, updatedDuration, quizId],
+			`UPDATE quizzes SET title = $1, description = $2, duration = $3, passing_score = $4 WHERE id = $5`,
+			[updatedTitle, updatedDescription, updatedDuration, updatedScore, quizId],
 		);
 
 		res.status(200).json({ message: "Quiz updated successfully" });
