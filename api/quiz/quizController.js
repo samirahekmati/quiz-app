@@ -342,11 +342,34 @@ export async function getQuizStudents(req, res) {
 		`,
 			[quizId],
 		);
+		// Fetch the passing score for the quiz
+		const passingScoreResult = await db.query(
+			"SELECT passing_score FROM quizzes WHERE id = $1",
+			[quizId],
+		);
+		if (passingScoreResult.rowCount === 0) {
+			return res.status(404).json({ message: "Quiz not found" });
+		}
+		const passingScore = passingScoreResult.rows[0].passing_score;
+
+		const enhancedSummaryResult = summaryResult.rows.map((student) => {
+			const correct = Number(student.correct_answers);
+			const incorrect = Number(student.incorrect_answers);
+			const percentage = (correct / (correct + incorrect)) * 100;
+			const passed = percentage >= passingScore;
+			return {
+				...student,
+				percentage: Math.round(percentage),
+				passed,
+				status: passed ? "Passed" : "Failed",
+			};
+		});
 
 		// Combine the data
 		const response = {
-			summary: summaryResult.rows,
+			summary: enhancedSummaryResult,
 			details: detailsResult.rows,
+			passingScore: passingScore,
 		};
 
 		res.json(response);
