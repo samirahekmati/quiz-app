@@ -99,12 +99,15 @@ function QuizReports() {
 										{quiz.title}
 									</h2>
 									<p className="text-orange-700 mb-2">{quiz.description}</p>
-									<div className="flex justify-between items-center mt-4">
-										<span className="bg-orange-500 text-white px-2 py-1 rounded text-xs">
+									<div className="flex justify-between items-center mt-4 gap-x-3">
+										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
 											Students: {quiz.students_participated || 0}
 										</span>
 										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
-											{quiz.total_questions || 0} questions
+											Questions: {quiz.total_questions || 0}
+										</span>
+										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
+											Passing score: {quiz.passing_score}
 										</span>
 									</div>
 								</button>
@@ -182,9 +185,13 @@ function QuizReports() {
 							(detail) => detail.is_correct,
 						).length;
 						const incorrectAnswers = totalQuestions - correctAnswers;
-						const percentage = Math.round(
-							(correctAnswers / totalQuestions) * 100,
+
+						// fetch student score and status
+						const studentSummary = students.summary.find(
+							(s) => s.username === selectedStudent,
 						);
+						const percentage = studentSummary ? studentSummary.percentage : 0;
+						const status = studentSummary ? studentSummary.status : "";
 
 						return (
 							<div className="space-y-6">
@@ -214,11 +221,18 @@ function QuizReports() {
 											</div>
 											<div className="text-sm text-gray-600">Incorrect</div>
 										</div>
-										<div className="text-center">
-											<div className="text-2xl font-bold text-purple-600">
+										{/* student score and status */}
+										<div className="text-center ">
+											<div
+												className={`text-xl font-semibold -mb-2 ${status === "Passed" ? "text-green-700" : "text-red-700"}`}
+											>
+												{status}
+											</div>
+											<div
+												className={`text-2xl font-bold ${status === "Passed" ? "text-green-600" : "text-red-600"}`}
+											>
 												{percentage}%
 											</div>
-											<div className="text-sm text-gray-600">Score</div>
 										</div>
 									</div>
 								</div>

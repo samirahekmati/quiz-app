@@ -12,6 +12,12 @@ const createQuizSchema = z.object({
 	duration: z
 		.number({ invalid_type_error: "Duration must be a number." })
 		.positive("Duration must be a positive number."),
+	passingScore: z
+		.number({
+			invalid_type_error: "Passing score must be a number between 0 to 100.",
+		})
+		.min(0, "Passing score must at least be 0")
+		.max(100, "Passing score cannot exceed 100."),
 });
 
 // Create a new quiz
@@ -19,8 +25,9 @@ export async function createQuiz(req, res) {
 	// Validate req.body using Zod
 	const parseResult = createQuizSchema.safeParse({
 		...req.body,
-		// Make sure to convert duration to a number since it might come as string
+		// convert duration and passing score to a number since it might come as string
 		duration: Number(req.body.duration),
+		passingScore: Number(req.body.passingScore),
 	});
 
 	if (!parseResult.success) {
@@ -32,7 +39,7 @@ export async function createQuiz(req, res) {
 		return res.status(400).json({ message: errorMessage });
 	}
 
-	const { title, description, duration } = parseResult.data;
+	const { title, description, duration, passingScore } = parseResult.data;
 
 	// Get user ID from request ( auth middleware sets req.user)
 	const userId = req.user?.id;
@@ -42,10 +49,10 @@ export async function createQuiz(req, res) {
 
 	try {
 		const result = await db.query(
-			`INSERT INTO quizzes (title, description, duration,user_id)
-			 VALUES ($1, $2, $3, $4)
-			 RETURNING id, title, description, duration,user_id`,
-			[title, description, duration, userId],
+			`INSERT INTO quizzes (title, description, duration,user_id, passing_score)
+			 VALUES ($1, $2, $3, $4, $5)
+			 RETURNING id, title, description, duration,user_id, passing_score`,
+			[title, description, duration, userId, passingScore],
 		);
 
 		const newQuiz = result.rows[0];
@@ -69,7 +76,7 @@ export async function getQuizById(req, res) {
 		const result = await db.query(
 			`
 		SELECT 
-		  q.id as quiz_id, q.title, q.description, q.duration,
+		  q.id as quiz_id, q.title, q.description, q.passing_score, q.duration,
 		  qs.id as question_id, qs.text as question_text, qs.type,
 		  o.id as option_id, o.text as option_text, o.is_correct
 		FROM quizzes q
@@ -92,6 +99,7 @@ export async function getQuizById(req, res) {
 			title: base.title,
 			description: base.description,
 			duration: base.duration,
+			passingScore: base.passing_score,
 			questions: [],
 		};
 
@@ -142,6 +150,7 @@ export async function getQuizzesByUser(req, res) {
 					q.title, 
 					q.description, 
 					q.duration,
+					q.passing_score,
 					q.created_at,
 					q.started_at,
 					q.ended_at,
@@ -155,7 +164,7 @@ export async function getQuizzesByUser(req, res) {
 				FROM quizzes q
 				LEFT JOIN answers a ON q.id = a.quiz_id
 				WHERE q.user_id = $1
-				GROUP BY q.id, q.title, q.description, q.duration, q.created_at, q.started_at, q.ended_at
+				GROUP BY q.id, q.title, q.description, q.duration, q.passing_score, q.created_at, q.started_at, q.ended_at
 				ORDER BY q.created_at DESC
 				`,
 				[userId],
@@ -166,7 +175,7 @@ export async function getQuizzesByUser(req, res) {
 			// Original query for dashboard (existing functionality)
 			const result = await db.query(
 				`
-				SELECT id, title, description, duration
+				SELECT id, title, description, duration, passing_score
 				FROM quizzes
 				WHERE user_id = $1
 				ORDER BY created_at DESC
@@ -222,11 +231,17 @@ export const updateQuizSchema = z.object({
 	title: z.string().min(1, "Title is required").optional(),
 	description: z.string().min(1, "Description is required").optional(),
 	duration: z.number().min(1, "Duration must be a positive number").optional,
+	passingScore: z
+		.number({
+			invalid_type_error: "Passing score must be a number between 0 to 100.",
+		})
+		.min(0, "Passing score must at least be 0")
+		.max(100, "Passing score cannot exceed 100."),
 });
 
 export async function updateQuiz(req, res) {
 	const { quizId } = req.params;
-	const { title, description, duration } = req.body;
+	const { title, description, duration, passingScore } = req.body;
 
 	if (!quizId || isNaN(Number(quizId))) {
 		return res
@@ -255,6 +270,8 @@ export async function updateQuiz(req, res) {
 			description !== undefined ? description : existingQuiz.description;
 		const updatedDuration =
 			duration !== undefined ? duration : existingQuiz.duration;
+		const updatedScore =
+			passingScore !== undefined ? passingScore : existingQuiz.passing_score;
 
 		// Validate required fields after merge
 		if (!updatedTitle || updatedTitle.trim() === "") {
@@ -272,8 +289,8 @@ export async function updateQuiz(req, res) {
 
 		// Update quiz record
 		await client.query(
-			`UPDATE quizzes SET title = $1, description = $2, duration = $3 WHERE id = $4`,
-			[updatedTitle, updatedDescription, updatedDuration, quizId],
+			`UPDATE quizzes SET title = $1, description = $2, duration = $3, passing_score = $4 WHERE id = $5`,
+			[updatedTitle, updatedDescription, updatedDuration, updatedScore, quizId],
 		);
 
 		res.status(200).json({ message: "Quiz updated successfully" });
@@ -325,11 +342,34 @@ export async function getQuizStudents(req, res) {
 		`,
 			[quizId],
 		);
+		// Fetch the passing score for the quiz
+		const passingScoreResult = await db.query(
+			"SELECT passing_score FROM quizzes WHERE id = $1",
+			[quizId],
+		);
+		if (passingScoreResult.rowCount === 0) {
+			return res.status(404).json({ message: "Quiz not found" });
+		}
+		const passingScore = passingScoreResult.rows[0].passing_score;
+
+		const enhancedSummaryResult = summaryResult.rows.map((student) => {
+			const correct = Number(student.correct_answers);
+			const incorrect = Number(student.incorrect_answers);
+			const percentage = (correct / (correct + incorrect)) * 100;
+			const passed = percentage >= passingScore;
+			return {
+				...student,
+				percentage: Math.round(percentage),
+				passed,
+				status: passed ? "Passed" : "Failed",
+			};
+		});
 
 		// Combine the data
 		const response = {
-			summary: summaryResult.rows,
+			summary: enhancedSummaryResult,
 			details: detailsResult.rows,
+			passingScore: passingScore,
 		};
 
 		res.json(response);
