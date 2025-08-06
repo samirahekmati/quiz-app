@@ -99,12 +99,15 @@ function QuizReports() {
 										{quiz.title}
 									</h2>
 									<p className="text-orange-700 mb-2">{quiz.description}</p>
-									<div className="flex justify-between items-center mt-4">
-										<span className="bg-orange-500 text-white px-2 py-1 rounded text-xs">
+									<div className="flex justify-between items-center mt-4 gap-x-3">
+										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
 											Students: {quiz.students_participated || 0}
 										</span>
 										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
-											{quiz.total_questions || 0} questions
+											Questions: {quiz.total_questions || 0}
+										</span>
+										<span className="bg-orange-300 text-orange-900 px-2 py-1 rounded text-xs">
+											Passing score: {quiz.passing_score}
 										</span>
 									</div>
 								</button>
