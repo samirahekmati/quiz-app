@@ -1,13 +1,8 @@
 import getApiBaseUrl from "./apiBaseUrl";
 
 // Fetch all quizzes created by the current mentor
-export async function fetchQuizzes(token, { includeReports = false } = {}) {
-	const url = new URL(`${getApiBaseUrl()}/quizzes/mine`);
-	if (includeReports) {
-		url.searchParams.append("includeReports", "true");
-	}
-
-	const res = await fetch(url, {
+export async function fetchQuizzes(token) {
+	const res = await fetch(`${getApiBaseUrl()}/quizzes/mine`, {
 		headers: { Authorization: `Bearer ${token}` },
 	});
 	if (!res.ok)
