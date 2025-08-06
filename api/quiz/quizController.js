@@ -2,6 +2,7 @@ import { z } from "zod";
 
 import db, { pool } from "../db.js";
 import logger from "../utils/logger.js";
+import { liveQuizzes } from "../ws/socketServer.js";
 
 // Define the schema for quiz creation
 const createQuizSchema = z.object({
@@ -70,6 +71,14 @@ export async function createQuiz(req, res) {
 // Get a quiz along with its questions and options
 export async function getQuizById(req, res) {
 	const { quizId } = req.params;
+	const { forStudent } = req.query;
+
+	if (forStudent === "true") {
+		const session = liveQuizzes[quizId];
+		if (!session || (session.status !== "waiting" && session.status !== "started")) {
+			return res.status(404).json({ message: "This quiz is not currently active or does not exist." });
+		}
+	}
 
 	try {
 		// Query to get quiz info + questions + options using JOINs

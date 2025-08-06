@@ -1,5 +1,4 @@
-import { useState } from "react";
-import { useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
 import getApiBaseUrl from "../services/apiBaseUrl";
@@ -16,6 +15,8 @@ function StudentJoin() {
 	const [error, setError] = useState("");
 	const [showError, setShowError] = useState(false);
 	const [loading, setLoading] = useState(false);
+	const [quizInfo, setQuizInfo] = useState(null);
+	const [isFetchingQuiz, setIsFetchingQuiz] = useState(false);
 	const navigate = useNavigate();
 	const [searchParams] = useSearchParams();
 
@@ -29,18 +30,42 @@ function StudentJoin() {
 		}
 	}, [searchParams]);
 
+	useEffect(() => {
+		if (quizId) {
+			setIsFetchingQuiz(true);
+			fetch(`${getApiBaseUrl()}/quizzes/${quizId}?forStudent=true`)
+				.then((res) => {
+					if (!res.ok) {
+						setQuizInfo(null);
+						throw new Error("Quiz not active");
+					}
+					return res.json();
+				})
+				.then((data) => {
+					setQuizInfo(data);
+				})
+				.catch(() => {
+					setQuizInfo(null);
+				})
+				.finally(() => {
+					setIsFetchingQuiz(false);
+				});
+		} else {
+			setQuizInfo(null);
+		}
+	}, [quizId]);
+
 	const handleSubmit = async (e) => {
 		e.preventDefault();
+		if (!quizInfo) {
+			setError("This quiz is not active. Please check the ID or wait for the mentor.");
+			setShowError(true);
+			setTimeout(() => setShowError(false), 4000);
+			return;
+		}
 		setError("");
 		setLoading(true);
 		try {
-			// Check quiz existence via API
-			const res = await fetch(`${getApiBaseUrl()}/quizzes/${quizId}`);
-			if (!res.ok) {
-				setError("Quiz ID is invalid or quiz not found.");
-				setLoading(false);
-				return;
-			}
 			// Connect socket (student)
 			connectSocket({ userId: username, role: "student" });
 			// Set student username in cookie for backend identification (MVP)
@@ -51,7 +76,7 @@ function StudentJoin() {
 			emitEvent("join-room", { quizId, userId: username, role: "student" });
 			// Listen for room-joined
 			onEvent("room-joined", () => {
-				navigate(`/student/quiz/${quizId}`);
+				navigate(`/student/quiz/${quizId}`, { state: { quizInfo } });
 			});
 			// Listen for error
 			onEvent("error", (err) =>
@@ -90,7 +115,7 @@ function StudentJoin() {
 						</button>
 					</div>
 				)}
-				<div className="bg-white rounded-2xl shadow-2xl p-8">
+				<div className="bg-green-50 rounded-2xl shadow-2xl p-8">
 					<h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
 						Join Quiz
 					</h1>
@@ -129,12 +154,37 @@ function StudentJoin() {
 								disabled={isQuizIdFromUrl}
 							/>
 						</div>
+
+						{isFetchingQuiz ? (
+							<div className="text-center text-gray-500">
+								Checking quiz status...
+							</div>
+						) : quizInfo ? (
+							<div className="p-4 border rounded-lg bg-green-100 text-center">
+								<h3 className="font-bold text-lg text-gray-800">Quiz Details</h3>
+								<hr className="my-2" />
+								{/* <p className="text-gray-700 mt-1 font-bold">Title</p> */}
+								<p className="text-gray-700 mt-1 font-bold">{quizInfo.title}</p>
+								{/* <p className="text-gray-700 mt-1 font-bold">Desctiption</p> */}
+								<p className="text-gray-700 mt-1">{quizInfo.description}</p>
+								<div className="text-m text-gray-700 mt-2">
+									<span className="font-bold">Duration:</span> {Math.round(quizInfo.duration / 60)} min
+								</div>
+							</div>
+						) : (
+							quizId && (
+								<div className="text-center text-red-500">
+									This quiz is not currently active.
+								</div>
+							)
+						)}
+
 						{error && !showError && (
 							<div className="text-red-600 text-sm text-center">{error}</div>
 						)}
 						<button
 							type="submit"
-							className="w-full px-4 py-3 bg-green-600 text-white font-bold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-4 focus:ring-green-300 transition-all duration-300 transform hover:scale-105"
+							className="btn-student"
 							disabled={loading}
 						>
 							{loading ? "Joining..." : "Join the Quiz!"}
@@ -142,7 +192,7 @@ function StudentJoin() {
 					</form>
 				</div>
 				<button
-					className="mt-6 w-full px-4 py-2 text-green rounded-lg hover:bg-white hover:bg-opacity-20 transition"
+					className="btn-secondary mt-5"
 					type="button"
 					onClick={() => navigate("/")}
 				>
