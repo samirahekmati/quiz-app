@@ -4,7 +4,6 @@ import { Outlet, useNavigate } from "react-router-dom";
 import mentoroLogo from "../assets/mentoro-white-logo.png";
 import getApiBaseUrl from "../services/apiBaseUrl";
 
-
 export default function Layout() {
 	const [mentor, setMentor] = useState(null);
 
@@ -42,7 +41,6 @@ export default function Layout() {
 
 	// Sidebar links
 	const navLinks = [
-		{ label: "Profile", section: "profile", path: "/mentor/profile" },
 		{ label: "Quizzes", section: "quizzes", path: "/mentor/dashboard" },
 		{ label: "Create New Quiz", section: "create", path: "/mentor/create" },
 		{ label: "Quiz reports", section: "reports", path: "/mentor/reports" },

@@ -43,7 +43,6 @@ function App() {
 				<Route path="quiz/:quizId/edit" element={<QuizEdit />} />
 				<Route path="live/:quizId" element={<MentorLiveQuiz />} />
 				<Route path="create" element={<CreateQuiz />} />
-				<Route path="profile" element={<div>Profile Page</div>} />
 				<Route path="reports" element={<QuizReports />} />
 			</Route>
 		</Routes>
