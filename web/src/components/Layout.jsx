@@ -1,9 +1,40 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 
 import mentoroLogo from "../assets/mentoro-white-logo.png";
+import getApiBaseUrl from "../services/apiBaseUrl";
+
 
 export default function Layout() {
+	const [mentor, setMentor] = useState(null);
+
+	useEffect(() => {
+		const token = localStorage.getItem("token");
+		if (!token) {
+			console.log("No token found");
+			return;
+		}
+
+		console.log("Making API call to fetch mentor details...");
+		fetch(`${getApiBaseUrl()}/auth/mentor`, {
+			headers: {
+				Authorization: `Bearer ${token}`,
+			},
+		})
+			.then((res) => {
+				console.log("API response status:", res.status);
+				if (!res.ok) throw new Error("Failed to fetch mentor details");
+				return res.json();
+			})
+			.then((data) => {
+				setMentor(data);
+				console.log("Mentor API response:", data);
+				console.log("Mentor object keys:", Object.keys(data));
+			})
+			.catch((err) => {
+				console.error("API call failed:", err);
+			});
+	}, []);
 	const navigate = useNavigate();
 	// "Quizzes" is the default active section when the page loads
 	const [activeSection, setActiveSection] = useState("quizzes");
@@ -35,43 +66,6 @@ export default function Layout() {
 
 	return (
 		<div className="flex min-h-screen bg-purple-50 relative">
-			{/* Mobile hamburger menu button */}
-			<button
-				onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-				className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-purple-600 text-white rounded-md shadow-lg hover:bg-purple-700 transition-colors"
-			>
-				<svg
-					className="w-6 h-6"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
-					<path
-						strokeLinecap="round"
-						strokeLinejoin="round"
-						strokeWidth={2}
-						d="M4 6h16M4 12h16M4 18h16"
-					/>
-				</svg>
-			</button>
-
-			{/* Logout button top right */}
-			<button
-				onClick={handleLogout}
-				className="fixed top-4 right-4 px-4 py-2 bg-gray-400 text-white rounded shadow hover:bg-gray-600 transition z-40"
-			>
-				Logout
-			</button>
-
-			{/* Overlay for mobile */}
-			{isSidebarOpen && (
-				<button
-					className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
-					onClick={() => setIsSidebarOpen(false)}
-					aria-label="Close sidebar"
-				/>
-			)}
-
 			{/* Sidebar */}
 			<aside
 				className={`fixed lg:static inset-y-0 left-0 z-40 w-64 bg-gradient-to-b from-purple-600 to-purple-400 text-white shadow-lg flex flex-col transform transition-transform duration-300 ease-in-out ${
@@ -126,10 +120,64 @@ export default function Layout() {
 				</button>
 			</aside>
 
-			{/* Main Content */}
-			<main className="flex-1 p-8 pt-24 lg:ml-0">
-				<Outlet />
-			</main>
+			{/* Main Content Area */}
+			<div className="flex-1">
+				{/* Header section with hello message and logout - only spans main content */}
+				<header
+					className="fixed top-0 right-0 lg:left-64 z-50 bg-white shadow-md px-4 py-4 flex justify-between items-center"
+					style={{ height: "80px" }}
+				>
+					<div className="flex items-center space-x-3">
+						{/* Mobile hamburger menu button */}
+						<button
+							onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+							className="lg:hidden p-2 bg-purple-600 text-white rounded-md shadow-lg hover:bg-purple-700 transition-colors"
+						>
+							<svg
+								className="w-6 h-6"
+								fill="none"
+								stroke="currentColor"
+								viewBox="0 0 24 24"
+							>
+								<path
+									strokeLinecap="round"
+									strokeLinejoin="round"
+									strokeWidth={2}
+									d="M4 6h16M4 12h16M4 18h16"
+								/>
+							</svg>
+						</button>
+
+						{/* Hello message */}
+						<div className="text-purple-800 text-2xl ms-8 font-semibold">
+							Hello,{" "}
+							{mentor && mentor.length > 0 ? mentor[0].username : "Mentor"}!
+						</div>
+					</div>
+
+					{/* Logout button */}
+					<button
+						onClick={handleLogout}
+						className="px-4 py-2 bg-purple-600 text-white rounded shadow hover:bg-purple-700 transition"
+					>
+						Logout
+					</button>
+				</header>
+
+				{/* Overlay for mobile */}
+				{isSidebarOpen && (
+					<button
+						className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-30"
+						onClick={() => setIsSidebarOpen(false)}
+						aria-label="Close sidebar"
+					/>
+				)}
+
+				{/* Main Content */}
+				<main className="p-8 pt-28">
+					<Outlet />
+				</main>
+			</div>
 		</div>
 	);
 }
